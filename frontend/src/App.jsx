@@ -1,7 +1,9 @@
+
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import TopperManagement from './pages/TopperManagement.jsx'
+import RoleDashboard from './pages/RoleDashboard.jsx'
 
 function NotFound() {
   return (
@@ -31,6 +33,20 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/admin"
+          element={<RoleDashboard expectedRole="admin" />}
+        />
+        <Route
+          path="/teacher"
+          element={<RoleDashboard expectedRole="teacher" />}
+        />
+        <Route
+          path="/student"
+          element={<RoleDashboard expectedRole="student" />}
+        />
+
         <Route path="/demo/toppers" element={<TopperManagement />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
