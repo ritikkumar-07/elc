@@ -7,6 +7,7 @@ import {
   login,
   logout,
   getMe,
+  changePassword,
 } from '../controllers/authController.js'
 
 import { requireAuth } from '../middleware/authMiddleware.js'
@@ -29,5 +30,6 @@ router.post('/signup', authLimiter, signup)
 router.post('/login', authLimiter, login)
 router.post('/logout', logout)
 router.get('/me', requireAuth, getMe)
+router.post('/change-password', requireAuth, changePassword)
 
 export default router

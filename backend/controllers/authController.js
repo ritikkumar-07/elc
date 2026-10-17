@@ -203,3 +203,59 @@ export function getMe(req, res) {
     user: publicUser(req.user),
   })
 }
+
+export async function changePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = req.body || {}
+
+    if (
+      typeof currentPassword !== 'string' ||
+      typeof newPassword !== 'string' ||
+      !currentPassword ||
+      newPassword.length < 8 ||
+      newPassword.length > 72
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Enter your current password and a new password of 8–72 characters.',
+      })
+    }
+
+    const user = await User.findById(req.user._id).select('+password')
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found.',
+      })
+    }
+
+    const matches = await bcrypt.compare(currentPassword, user.password)
+
+    if (!matches) {
+      return res.status(400).json({
+        success: false,
+        message: 'Your current password is incorrect.',
+      })
+    }
+
+    const samePassword = await bcrypt.compare(newPassword, user.password)
+
+    if (samePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Choose a password different from your current password.',
+      })
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12)
+    await user.save()
+
+    return res.json({
+      success: true,
+      message: 'Password changed successfully.',
+    })
+  } catch (error) {
+    next(error)
+  }
+}
