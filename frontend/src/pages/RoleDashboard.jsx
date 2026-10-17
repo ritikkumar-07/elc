@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
+import HeroBannerManager from '../components/dashboard/HeroBannerManager.jsx'
+import Hero from '../components/home/Hero.jsx'
 
 const API_URL = (
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
@@ -186,7 +188,7 @@ function LoadingScreen() {
   )
 }
 
-export default function RoleDashboard({ expectedRole }) {
+export default function RoleDashboard({ expectedRole, section }) {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -316,6 +318,13 @@ export default function RoleDashboard({ expectedRole }) {
     year: 'numeric',
   }).format(new Date())
 
+  if (section === 'hero-banners') {
+    if (user.role !== 'admin') {
+      return <main className="grid min-h-screen place-items-center p-6"><section className="rounded-xl border border-slate-200 bg-white p-6"><h1 className="text-xl font-bold">Access denied</h1><p className="mt-2 text-sm text-slate-600">Only institute administrators can manage homepage banners.</p><Link className="mt-4 inline-block text-blue-800 underline" to="/">Return to dashboard</Link></section></main>
+    }
+    return <DashboardLayout title="Hero Banner Management" description="Manage the slides displayed on the public homepage." user={user} onLogout={handleLogout}><HeroBannerManager /></DashboardLayout>
+  }
+
   return (
     <DashboardLayout
       title={config.heading}
@@ -325,17 +334,16 @@ export default function RoleDashboard({ expectedRole }) {
       activePath="/admin"
     >
       <div className="space-y-8">
+        {/* The same managed 5-second hero carousel shown on the public homepage. */}
+        <Hero variant="dashboard" canManageBanners={user.role === 'admin'} />
+
         {/* Compact welcome header */}
         <section className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-center">
           <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span className="font-semibold text-blue-800">ELC Portal</span>
-              <span>/</span>
-              <span>{config.label}</span>
-            </div>
+
 
             <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-              Good morning, {firstName}.
+              Welcome , {firstName}.
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
@@ -404,7 +412,7 @@ export default function RoleDashboard({ expectedRole }) {
         </section>
 
         {/* Institute note */}
-        <section className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+        {/* <section className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-lg text-blue-900">
               E
@@ -425,7 +433,7 @@ export default function RoleDashboard({ expectedRole }) {
           >
             Visit public website ↗
           </Link>
-        </section>
+        </section> */}
       </div>
     </DashboardLayout>
   )

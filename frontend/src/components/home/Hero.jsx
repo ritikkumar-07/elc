@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const slides = [
+const defaultSlides = [
   {
     eyebrow: 'PREPARE · PERFORM · PROGRESS',
     title: 'Take the Next Step in Your Education',
@@ -50,11 +50,44 @@ const features = [
   },
 ]
 
-export default function Hero() {
+const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '')
+
+export default function Hero({ variant = 'public', canManageBanners = false }) {
+  const isPublic = variant === 'public'
+  const [slides, setSlides] = useState(defaultSlides)
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
 
-  const slide = slides[activeIndex]
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`${API_URL}/api/v1/hero-banners`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Managed hero banners are unavailable')
+        const result = await response.json()
+        if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
+          return result.data.map((banner) => ({
+            eyebrow: banner.eyebrow,
+            title: banner.title,
+            description: banner.description,
+            image: banner.imageUrl,
+            alt: banner.altText,
+          }))
+        }
+        return null
+      })
+      .then((managedSlides) => {
+        if (!controller.signal.aborted && managedSlides?.length) {
+          setSlides(managedSlides)
+          setActiveIndex(0)
+        }
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') { /* Keep the original slides available when the API is offline. */ }
+      })
+    return () => controller.abort()
+  }, [])
+
+  const slide = slides[activeIndex] || slides[0]
 
   // Automatically change slides every 5 seconds.
   useEffect(() => {
@@ -65,7 +98,7 @@ export default function Hero() {
     }, 5000)
 
     return () => window.clearInterval(timer)
-  }, [isPaused])
+  }, [isPaused, slides.length])
 
   const previousSlide = () => {
     setActiveIndex(
@@ -123,19 +156,40 @@ export default function Hero() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 min-[390px]:flex-row min-[390px]:flex-wrap sm:mt-8">
-              <Link
-                to="/login"
-                className="inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-[#12315f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0c2347] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
-              >
-                Student Portal <span aria-hidden="true">→</span>
-              </Link>
+              {isPublic ? (
+                <>
+                  <Link
+                    to="/login"
+                    className="inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-[#12315f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0c2347] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
+                  >
+                    Student Portal <span aria-hidden="true">→</span>
+                  </Link>
 
-              <Link
-                to="/login"
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#9aacc7] bg-white/90 px-5 py-3 text-sm font-semibold text-[#12315f] transition-colors hover:border-[#12315f] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
-              >
-                Student &amp; Staff Login
-              </Link>
+                  <Link
+                    to="/login"
+                    className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#9aacc7] bg-white/90 px-5 py-3 text-sm font-semibold text-[#12315f] transition-colors hover:border-[#12315f] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
+                  >
+                    Student &amp; Staff Login
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/"
+                    className="inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-[#12315f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0c2347] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
+                  >
+                    View Public Website <span aria-hidden="true">→</span>
+                  </Link>
+                  {canManageBanners && (
+                    <Link
+                      to="/admin/hero-banners"
+                      className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#9aacc7] bg-white/90 px-5 py-3 text-sm font-semibold text-[#12315f] transition-colors hover:border-[#12315f] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
+                    >
+                      Manage Hero Banners
+                    </Link>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Slide indicators */}
@@ -214,7 +268,8 @@ export default function Hero() {
         </button>
       </section>
 
-      {/* Learning highlights */}
+      {/* Learning highlights are part of the public homepage, not the dashboard. */}
+      {isPublic && (
       <section
         aria-label="Learning highlights"
         className="border-b border-slate-100 bg-white"
@@ -241,6 +296,7 @@ export default function Hero() {
           ))}
         </div>
       </section>
+      )}
     </>
   )
 }
