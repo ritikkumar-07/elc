@@ -1,5 +1,6 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import TopperManagement from './pages/TopperManagement.jsx'
@@ -11,12 +12,15 @@ function NotFound() {
       <p className="text-sm font-bold uppercase tracking-widest text-blue-800">
         Error 404
       </p>
+
       <h1 className="mt-3 text-4xl font-extrabold text-slate-900">
         Page not found
       </h1>
+
       <p className="mt-3 text-slate-600">
         The page you are looking for does not exist.
       </p>
+
       <a
         href="/"
         className="mt-6 rounded-xl bg-blue-900 px-5 py-3 font-bold text-white"
@@ -38,16 +42,65 @@ export default function App() {
           path="/admin"
           element={<RoleDashboard expectedRole="admin" />}
         />
+
+        <Route
+          path="/admin/hero-banners"
+          element={
+            <RoleDashboard
+              expectedRole="admin"
+              section="hero-banners"
+            />
+          }
+        />
+
         <Route
           path="/teacher"
           element={<RoleDashboard expectedRole="teacher" />}
         />
+
         <Route
           path="/student"
           element={<RoleDashboard expectedRole="student" />}
         />
 
-        <Route path="/demo/toppers" element={<TopperManagement />} />
+        <Route
+          path="/admin/students"
+          element={<RoleDashboard expectedRole="admin" section="students" />}
+        />
+        <Route
+          path="/admin/teachers"
+          element={<RoleDashboard expectedRole="admin" section="teachers" />}
+        />
+        <Route
+          path="/admin/classes"
+          element={<RoleDashboard expectedRole="admin" section="classes" />}
+        />
+        <Route
+          path="/admin/notes"
+          element={<RoleDashboard expectedRole="admin" section="notes" />}
+        />
+        <Route
+          path="/admin/tests"
+          element={<RoleDashboard expectedRole="admin" section="tests" />}
+        />
+        <Route
+          path="/admin/results"
+          element={<RoleDashboard expectedRole="admin" section="results" />}
+        />
+        <Route
+          path="/admin/attendance"
+          element={<RoleDashboard expectedRole="admin" section="attendance" />}
+        />
+        <Route
+          path="/admin/announcements"
+          element={<RoleDashboard expectedRole="admin" section="announcements" />}
+        />
+
+        <Route
+          path="/demo/toppers"
+          element={<TopperManagement />}
+        />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

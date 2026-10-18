@@ -63,6 +63,49 @@ const roleConfig = {
   },
 }
 
+const adminModuleConfig = {
+  students: {
+    title: 'Student Management',
+    description: 'Manage student registrations and academic records.',
+    nextStep: 'Student records and approval APIs need to be implemented.',
+  },
+  teachers: {
+    title: 'Teacher Management',
+    description: 'Manage teacher accounts and approval status.',
+    nextStep: 'Teacher management APIs and approval workflows need to be implemented.',
+  },
+  classes: {
+    title: 'Classes & Subjects',
+    description: 'Organise classes, subjects and assignments.',
+    nextStep: 'Class and subject models and APIs need to be implemented.',
+  },
+  notes: {
+    title: 'Study Materials',
+    description: 'Manage notes, resources and previous question papers.',
+    nextStep: 'File storage and study-material APIs need to be implemented.',
+  },
+  tests: {
+    title: 'Tests & Papers',
+    description: 'Organise assessments and question papers.',
+    nextStep: 'Assessment models and APIs need to be implemented.',
+  },
+  results: {
+    title: 'Results',
+    description: 'Review marks and academic performance.',
+    nextStep: 'Marks entry and results APIs need to be implemented.',
+  },
+  attendance: {
+    title: 'Attendance',
+    description: 'Manage classroom attendance and reports.',
+    nextStep: 'Attendance models and APIs need to be implemented.',
+  },
+  announcements: {
+    title: 'Announcements',
+    description: 'Prepare institute announcements for students and teachers.',
+    nextStep: 'Announcement management and publishing APIs need to be implemented.',
+  },
+}
+
 function SectionTitle({ eyebrow, title, description, action }) {
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -323,6 +366,35 @@ export default function RoleDashboard({ expectedRole, section }) {
       return <main className="grid min-h-screen place-items-center p-6"><section className="rounded-xl border border-slate-200 bg-white p-6"><h1 className="text-xl font-bold">Access denied</h1><p className="mt-2 text-sm text-slate-600">Only institute administrators can manage homepage banners.</p><Link className="mt-4 inline-block text-blue-800 underline" to="/">Return to dashboard</Link></section></main>
     }
     return <DashboardLayout title="Hero Banner Management" description="Manage the slides displayed on the public homepage." user={user} onLogout={handleLogout}><HeroBannerManager /></DashboardLayout>
+  }
+
+  if (section && adminModuleConfig[section]) {
+    const module = adminModuleConfig[section]
+
+    return (
+      <DashboardLayout
+        title={module.title}
+        description={module.description}
+        user={user}
+        onLogout={handleLogout}
+        activePath={`/admin/${section}`}
+      >
+        <section className="rounded-xl border border-amber-200 bg-white p-5 sm:p-7">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-700">
+            Admin module
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-slate-900">
+            {module.title}
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            This module has a route, but its functionality is not implemented yet.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            {module.nextStep}
+          </p>
+        </section>
+      </DashboardLayout>
+    )
   }
 
   return (

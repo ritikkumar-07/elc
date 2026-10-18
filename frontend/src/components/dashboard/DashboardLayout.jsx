@@ -64,6 +64,15 @@ export default function DashboardLayout({
 
   const menuRef = useRef(null)
 
+  const visibleItems =
+    user?.role === 'admin'
+      ? items
+      : user?.role === 'teacher'
+        ? [{ section: 'MAIN', links: [['Overview', '/teacher', '▦']] }]
+        : user?.role === 'student'
+          ? [{ section: 'MAIN', links: [['Overview', '/student', '▦']] }]
+          : []
+
   useEffect(() => {
     function handleOutsideClick(event) {
       if (
@@ -148,9 +157,9 @@ export default function DashboardLayout({
 
   const dashboardPath =
     user?.role === 'teacher'
-      ? '/teacher-dashboard'
+      ? '/teacher'
       : user?.role === 'student'
-        ? '/student-dashboard'
+        ? '/student'
         : '/admin'
 
   return (
@@ -322,7 +331,7 @@ export default function DashboardLayout({
             className="py-5"
             aria-label="Institute dashboard sections"
           >
-            {items.map((group) => (
+            {visibleItems.map((group) => (
               <div key={group.section} className="mb-5">
                 <p className="mb-2 px-7 text-[10px] font-semibold tracking-[0.08em] text-slate-400">
                   {group.section}
