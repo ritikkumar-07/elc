@@ -1,10 +1,12 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-
+import Register from './pages/Register.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import TopperManagement from './pages/TopperManagement.jsx'
 import RoleDashboard from './pages/RoleDashboard.jsx'
+import RegistrationApprovals from './pages/RegistrationApprovals.jsx'
+
 
 function NotFound() {
   return (
@@ -37,12 +39,15 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-
+        <Route path="/register" element={<Register />} />
         <Route
           path="/admin"
           element={<RoleDashboard expectedRole="admin" />}
         />
-
+        <Route
+          path="/admin/registrations"
+          element={<RegistrationApprovals />}
+        />
         <Route
           path="/admin/hero-banners"
           element={

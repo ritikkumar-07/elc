@@ -137,6 +137,18 @@ export default function Login() {
               <LoginForm />
             </div>
 
+            <div className="mt-5 text-center">
+              <p className="text-sm text-slate-600">
+                New to ELC?{' '}
+                <Link
+                  to="/register"
+                  className="font-semibold text-blue-800 hover:text-blue-950 hover:underline"
+                >
+                  Create an account
+                </Link>
+              </p>
+            </div>
+
             <p className="mt-6 text-center text-xs leading-5 text-slate-500">
               Your account access is protected by ELC authentication.
               <br />

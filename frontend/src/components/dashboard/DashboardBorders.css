@@ -1,0 +1,52 @@
+
+/* ELC Dashboard — White background, black boundaries */
+
+.elc-layout {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+/* Top navbar boundary */
+.elc-layout > header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Sidebar right boundary */
+.elc-layout #dashboard-sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+/* Main dashboard content boundary */
+.elc-layout main {
+  background: #ffffff;
+}
+
+/* Mobile dashboard toolbar */
+.elc-layout .dashboard-mobile-toolbar {
+  border-bottom: 1px solid #000000 !important;
+  background: #ffffff !important;
+}
+
+/* Section cards */
+.elc-layout main > section,
+.elc-layout main > div > section {
+  border-color: #000000;
+}
+
+/* Profile menu and dialog */
+.elc-layout [role="menu"],
+.elc-layout [role="dialog"] {
+  border: 1px solid #000000 !important;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+}
+
+/* Keep focus indicators visible */
+.elc-layout a:focus-visible,
+.elc-layout button:focus-visible {
+  outline: 2px solid #000000;
+  outline-offset: 2px;
+}

@@ -129,6 +129,7 @@ import cookieParser from 'cookie-parser'
 import topperRoutes from './routes/topperRoutes.js'
 import authRoutes from './routes/authRoutes.js'
 import heroBannerRoutes from './routes/heroBannerRoutes.js'
+import adminRoutes from './routes/adminRoutes.js'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 5000
@@ -180,6 +181,7 @@ app.use('/api', apiLimiter)
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/toppers', topperRoutes)
 app.use('/api/v1/hero-banners', heroBannerRoutes)
+app.use('/api/v1/admin', adminRoutes)
 
 // Health check
 app.get('/api/v1/health', (req, res) => {

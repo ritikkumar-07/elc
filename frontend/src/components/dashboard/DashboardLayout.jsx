@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import Footer from '../layout/Footer.jsx'
+import './DashboardBorders.css'
 
 const items = [
   {
@@ -10,6 +11,7 @@ const items = [
       ['Overview', '/admin', '▦'],
       ['Students', '/admin/students', '♙'],
       ['Teachers', '/admin/teachers', '♧'],
+      ['Registration Approvals', '/admin/registrations', '✓'],
     ],
   },
   {
@@ -163,7 +165,7 @@ export default function DashboardLayout({
         : '/admin'
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f8fafc] text-slate-900">
+    <div className="elc-layout flex min-h-screen flex-col bg-white text-slate-900">
       {/* Shared ELC navbar */}
       <header className="sticky top-0 z-50 w-full shrink-0 border-b border-slate-200 bg-white">
         <div className="mx-auto flex min-h-[72px] w-full items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
@@ -298,23 +300,22 @@ export default function DashboardLayout({
             type="button"
             aria-label="Close dashboard navigation"
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-x-0 bottom-0 top-[72px] z-[60] bg-slate-950/40 backdrop-blur-[2px] lg:hidden"
+            className="fixed inset-x-0 bottom-0 top-[72px] z-30 bg-black/30 lg:hidden"
           />
         )}
 
         {/* Dashboard sidebar */}
         <aside
           id="dashboard-sidebar"
-          className={`fixed bottom-0 left-0 top-[72px] z-[70] w-[min(82vw,300px)] overflow-y-auto border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out lg:sticky lg:bottom-auto lg:left-auto lg:top-[72px] lg:h-[calc(100vh-72px)] lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
-            sidebarOpen
-              ? 'translate-x-0'
+          className={`fixed bottom-0 left-0 top-[72px] z-40 w-[min(82vw,300px)] overflow-y-auto border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out lg:sticky lg:bottom-auto lg:left-auto lg:top-0 lg:z-20 lg:h-[calc(100vh-72px)] lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
+              sidebarOpen ? 'translate-x-0'
               : '-translate-x-full'
           }`}
         >
           {/* Drawer heading, mobile only */}
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 lg:hidden">
             <span className="text-sm font-bold">
-              ELC Dashboard
+              Dashboard
             </span>
 
             <button
@@ -375,7 +376,7 @@ export default function DashboardLayout({
         </aside>
 
         {/* Main dashboard area */}
-        <div className="flex min-h-[calc(100vh-72px)] min-w-0 flex-1 flex-col">
+        <div className="flex min-h-[calc(100vh-72px)] min-w-0 flex-1 flex-col bg-white">
           {/* Mobile dashboard toolbar */}
           <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
             <button
@@ -387,7 +388,6 @@ export default function DashboardLayout({
               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               <span aria-hidden="true">☰</span>
-              Dashboard Menu
             </button>
 
             <Link
@@ -405,7 +405,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Shared public footer: full viewport width, below sidebar and content */}
-      <div className="relative z-10 w-full shrink-0">
+      <div className="relative z-0 w-full shrink-0">
         <Footer />
       </div>
 

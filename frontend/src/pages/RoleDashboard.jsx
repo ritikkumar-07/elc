@@ -15,13 +15,14 @@ const roleConfig = {
     heading: 'Institute overview',
     description: 'Manage your institute and keep academic operations organised.',
     modules: [
-      { icon: '♙', title: 'Students', description: 'Registrations, approvals and class assignments', path: '/admin/students' },
+      { icon: '♙', title: 'Students', description: 'Student records and academic information', path: '/admin/students' },
+      { icon: '✓', title: 'Registration Approvals', description: 'Approve or reject pending student and teacher accounts', path: '/admin/registrations' },
       { icon: '▤', title: 'Study materials', description: 'Class notes, resources and previous papers', path: '/admin/notes' },
       { icon: '✓', title: 'Tests & results', description: 'Assessments, marks and academic performance', path: '/admin/tests' },
       { icon: '◷', title: 'Attendance', description: 'Attendance records and class reports', path: '/admin/attendance' },
     ],
     tasks: [
-      { number: '01', title: 'Review student registrations', detail: 'Approve accounts and assign classes.', path: '/admin/students', icon: '♙' },
+      { number: '01', title: 'Review registrations', detail: 'Approve or reject pending student and teacher accounts.', path: '/admin/registrations', icon: '✓' },
       { number: '02', title: 'Publish study materials', detail: 'Organise notes by class and subject.', path: '/admin/notes', icon: '▤' },
       { number: '03', title: 'Prepare assessments', detail: 'Organise tests and previous question papers.', path: '/admin/tests', icon: '✓' },
       { number: '04', title: 'Manage student achievements', detail: 'Update the public toppers section.', path: '/demo/toppers', icon: '☆' },

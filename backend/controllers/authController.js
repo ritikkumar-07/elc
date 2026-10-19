@@ -34,7 +34,7 @@ function createToken(user) {
   return jwt.sign(
     { sub: user._id.toString() },
     process.env.JWT_SECRET,
-    { expiresIn: '1d' }
+    { expiresIn: '1d', algorithm: 'HS256' }
   )
 }
 
@@ -49,6 +49,7 @@ function publicUser(user) {
 }
 
 // POST /api/v1/auth/signup
+// Students and teachers must be approved by an admin before login.
 export async function signup(req, res, next) {
   try {
     const parsed = signupSchema.safeParse(req.body)
@@ -85,25 +86,14 @@ export async function signup(req, res, next) {
       email,
       password: hashedPassword,
       role,
-      status: role === 'teacher' ? 'pending' : 'active',
+      status: 'pending',
     })
 
-    // Pending teachers must wait for admin approval.
-    if (user.status !== 'active') {
-      return res.status(201).json({
-        success: true,
-        message: 'Teacher registration submitted for admin approval.',
-        user: publicUser(user),
-      })
-    }
-
-    const token = createToken(user)
-
-    res.cookie('elc_token', token, cookieOptions)
-
+    // No login token or authentication cookie is issued during registration.
     return res.status(201).json({
       success: true,
-      message: 'Account created successfully.',
+      message:
+        'Registration submitted successfully. Admin approval has not been granted yet. Please contact the admin.',
       user: publicUser(user),
     })
   } catch (error) {
@@ -114,7 +104,7 @@ export async function signup(req, res, next) {
       })
     }
 
-    next(error)
+    return next(error)
   }
 }
 
@@ -156,14 +146,26 @@ export async function login(req, res, next) {
     if (user.status === 'pending') {
       return res.status(403).json({
         success: false,
-        message: 'Your account is awaiting admin approval.',
+        code: 'ACCOUNT_PENDING',
+        message:
+          'Admin approval has not been granted yet. Please contact the admin.',
+      })
+    }
+
+    if (user.status === 'rejected') {
+      return res.status(403).json({
+        success: false,
+        code: 'ACCOUNT_REJECTED',
+        message:
+          'Your registration was not approved. Please contact the admin.',
       })
     }
 
     if (user.status !== 'active') {
       return res.status(403).json({
         success: false,
-        message: 'This account is not active.',
+        code: 'ACCOUNT_INACTIVE',
+        message: 'This account is not active. Please contact the admin.',
       })
     }
 
@@ -177,7 +179,7 @@ export async function login(req, res, next) {
       user: publicUser(user),
     })
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }
 
@@ -204,6 +206,7 @@ export function getMe(req, res) {
   })
 }
 
+// POST /api/v1/auth/change-password
 export async function changePassword(req, res, next) {
   try {
     const { currentPassword, newPassword } = req.body || {}
@@ -217,7 +220,8 @@ export async function changePassword(req, res, next) {
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Enter your current password and a new password of 8–72 characters.',
+        message:
+          'Enter your current password and a new password of 8–72 characters.',
       })
     }
 
@@ -230,7 +234,10 @@ export async function changePassword(req, res, next) {
       })
     }
 
-    const matches = await bcrypt.compare(currentPassword, user.password)
+    const matches = await bcrypt.compare(
+      currentPassword,
+      user.password
+    )
 
     if (!matches) {
       return res.status(400).json({
@@ -239,23 +246,27 @@ export async function changePassword(req, res, next) {
       })
     }
 
-    const samePassword = await bcrypt.compare(newPassword, user.password)
+    const samePassword = await bcrypt.compare(
+      newPassword,
+      user.password
+    )
 
     if (samePassword) {
       return res.status(400).json({
         success: false,
-        message: 'Choose a password different from your current password.',
+        message:
+          'Choose a password different from your current password.',
       })
     }
 
     user.password = await bcrypt.hash(newPassword, 12)
     await user.save()
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: 'Password changed successfully.',
     })
   } catch (error) {
-    next(error)
+    return next(error)
   }
 }

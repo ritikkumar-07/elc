@@ -5,38 +5,44 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
+      required: [true, 'Name is required.'],
       trim: true,
-      minlength: 2,
-      maxlength: 100,
+      minlength: [2, 'Name must be at least 2 characters long.'],
+      maxlength: [100, 'Name cannot exceed 100 characters.'],
     },
 
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required.'],
       unique: true,
       lowercase: true,
       trim: true,
-      maxlength: 254,
+      maxlength: [254, 'Email cannot exceed 254 characters.'],
     },
 
     password: {
       type: String,
-      required: true,
+      required: [true, 'Password is required.'],
       select: false,
     },
 
     role: {
       type: String,
-      enum: ['student', 'teacher', 'admin'],
+      enum: {
+        values: ['student', 'teacher', 'admin'],
+        message: 'Invalid user role.',
+      },
       default: 'student',
       required: true,
     },
 
     status: {
       type: String,
-      enum: ['active', 'pending', 'suspended'],
-      default: 'active',
+      enum: {
+        values: ['pending', 'active', 'rejected', 'suspended'],
+        message: 'Invalid account status.',
+      },
+      default: 'pending',
       required: true,
     },
   },
