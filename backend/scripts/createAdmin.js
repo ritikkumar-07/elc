@@ -15,8 +15,8 @@ async function createAdmin() {
     )
   }
 
-  if (password.length < 6 || password.length > 72) {
-    throw new Error('Admin password must be 6–72 characters.')
+  if (password.length < 8 || password.length > 72) {
+    throw new Error('Admin password must be 8–72 characters.')
   }
 
   await mongoose.connect(process.env.MONGODB_URI, {

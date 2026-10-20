@@ -6,7 +6,6 @@ export default function TopperCard({ topper }) {
     board,
     percentage,
     session,
-    rank,
     photo,
     description,
   } = topper

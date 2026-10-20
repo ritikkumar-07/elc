@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 const emptyForm = {
   name: '',
@@ -12,13 +12,10 @@ const emptyForm = {
 }
 
 export default function TopperForm({ initialData, onSave, onCancel }) {
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState(() =>
+    initialData ? { ...emptyForm, ...initialData } : emptyForm,
+  )
   const [photoError, setPhotoError] = useState('')
-
-  useEffect(() => {
-    setForm(initialData ? { ...emptyForm, ...initialData } : emptyForm)
-    setPhotoError('')
-  }, [initialData])
 
   function updateField(event) {
     const { name, value, type, checked } = event.target

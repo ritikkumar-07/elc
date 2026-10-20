@@ -222,12 +222,64 @@ app.use((err, req, res, next) => {
   })
 })
 
+function validateEnvironment() {
+  const problems = []
+
+  if (!process.env.MONGODB_URI) {
+    problems.push('MONGODB_URI is required')
+  } else if (
+    !/^mongodb(\+srv)?:\/\//i.test(process.env.MONGODB_URI)
+  ) {
+    problems.push(
+      'MONGODB_URI must start with mongodb:// or mongodb+srv://',
+    )
+  }
+
+  if (
+    !process.env.JWT_SECRET ||
+    process.env.JWT_SECRET.length < 32
+  ) {
+    problems.push(
+      'JWT_SECRET must contain at least 32 characters',
+    )
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      `Invalid environment configuration: ${problems.join('; ')}. Check backend/.env.`,
+    )
+  }
+}
+
+function hasDatabaseName(uri) {
+  try {
+    const parsed = new URL(
+      uri.replace(/^mongodb(\+srv)?:\/\//i, 'http://'),
+    )
+
+    return Boolean(parsed.pathname.replace(/^\/+/, ''))
+  } catch {
+    return false
+  }
+}
+
+function redactErrorMessage(message) {
+  return String(message)
+    .replace(/mongodb(\+srv)?:\/\/\S+/gi, 'mongodb[redacted]')
+    .replace(
+      /(JWT_SECRET|ADMIN_PASSWORD)\s*=\s*\S+/gi,
+      '$1=[redacted]',
+    )
+}
+
 // Start after MongoDB connects
 async function startServer() {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error(
-        'MONGODB_URI is missing. Check backend/.env.',
+    validateEnvironment()
+
+    if (!hasDatabaseName(process.env.MONGODB_URI)) {
+      console.warn(
+        'MONGODB_URI has no database name. MongoDB will use its default "test" database; add /<database> to the URI to make this explicit.',
       )
     }
 
@@ -245,7 +297,16 @@ async function startServer() {
       )
     })
   } catch (error) {
-    console.error('Backend startup failed:', error.message)
+    const message = redactErrorMessage(error.message)
+
+    console.error('Backend startup failed:', message)
+
+    if (/querySrv|ECONNREFUSED|ENOTFOUND|ETIMEOUT/i.test(message)) {
+      console.error(
+        'MongoDB DNS or network access failed. Check DNS, internet connectivity, and Atlas Network Access, then retry.',
+      )
+    }
+
     process.exit(1)
   }
 }

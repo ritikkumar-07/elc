@@ -48,8 +48,6 @@ function Initials({ name }) {
 }
 
 export default function DashboardLayout({
-  title = 'Dashboard',
-  description,
   user,
   onLogout,
   children,

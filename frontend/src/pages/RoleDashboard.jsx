@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
 import HeroBannerManager from '../components/dashboard/HeroBannerManager.jsx'
@@ -239,69 +239,74 @@ export default function RoleDashboard({ expectedRole, section }) {
   const [error, setError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
 
-  const verifySession = useCallback(async (signal) => {
+  function retrySession() {
     setLoading(true)
     setError('')
-
-    try {
-      const response = await fetch(`${API_URL}/api/v1/auth/me`, {
-        method: 'GET',
-        credentials: 'include',
-        cache: 'no-store',
-        signal,
-      })
-
-      const result = await response.json().catch(() => ({}))
-
-      if (response.status === 401) {
-        setUser(null)
-        navigate('/login', { replace: true })
-        return
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          result.message || `Server returned ${response.status}.`,
-        )
-      }
-
-      if (!result.success || !result.user) {
-        throw new Error('The server returned an invalid session response.')
-      }
-
-      if (!roleConfig[result.user.role]) {
-        throw new Error('This account has an unsupported role.')
-      }
-
-      if (result.user.role !== expectedRole) {
-        const paths = {
-          admin: '/admin',
-          teacher: '/teacher',
-          student: '/student',
-        }
-        navigate(paths[result.user.role] || '/login', { replace: true })
-        return
-      }
-
-      setUser(result.user)
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        setError(
-          err instanceof TypeError
-            ? 'The ELC server could not be reached. Please check that the backend is running.'
-            : err.message || 'Unable to verify your session.',
-        )
-      }
-    } finally {
-      if (!signal?.aborted) setLoading(false)
-    }
-  }, [expectedRole, navigate])
+    setRetryCount((count) => count + 1)
+  }
 
   useEffect(() => {
     const controller = new AbortController()
-    verifySession(controller.signal)
+
+    async function verifySession() {
+      try {
+        const response = await fetch(`${API_URL}/api/v1/auth/me`, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+
+        const result = await response.json().catch(() => ({}))
+
+        if (response.status === 401) {
+          setUser(null)
+          navigate('/login', { replace: true })
+          return
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            result.message || `Server returned ${response.status}.`,
+          )
+        }
+
+        if (!result.success || !result.user) {
+          throw new Error('The server returned an invalid session response.')
+        }
+
+        if (!roleConfig[result.user.role]) {
+          throw new Error('This account has an unsupported role.')
+        }
+
+        if (result.user.role !== expectedRole) {
+          const paths = {
+            admin: '/admin',
+            teacher: '/teacher',
+            student: '/student',
+          }
+          navigate(paths[result.user.role] || '/login', { replace: true })
+          return
+        }
+
+        setUser(result.user)
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(
+            err instanceof TypeError
+              ? 'The ELC server could not be reached. Please check that the backend is running.'
+              : err.message || 'Unable to verify your session.',
+          )
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false)
+      }
+    }
+
+    verifySession()
+
     return () => controller.abort()
-  }, [verifySession, retryCount])
+  }, [expectedRole, navigate, retryCount])
 
   async function handleLogout() {
     try {
@@ -335,7 +340,7 @@ export default function RoleDashboard({ expectedRole, section }) {
           <div className="mt-6 flex gap-3">
             <button
               type="button"
-              onClick={() => setRetryCount((count) => count + 1)}
+              onClick={retrySession}
               className="rounded-xl bg-blue-900 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-800"
             >
               Try again

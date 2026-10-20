@@ -50,9 +50,6 @@ export default function HeroBannerManager() {
   const [notice, setNotice] = useState('')
 
   const loadBanners = useCallback(async () => {
-    setLoading(true)
-    setError('')
-
     try {
       const result = await apiRequest('/api/v1/hero-banners')
 
@@ -64,9 +61,37 @@ export default function HeroBannerManager() {
     }
   }, [])
 
+  async function refreshBanners() {
+    setLoading(true)
+    setError('')
+    await loadBanners()
+  }
+
   useEffect(() => {
-    loadBanners()
-  }, [loadBanners])
+    const controller = new AbortController()
+
+    async function loadInitialBanners() {
+      try {
+        const result = await apiRequest('/api/v1/hero-banners', {
+          signal: controller.signal,
+        })
+
+        setBanners(Array.isArray(result.data) ? result.data : [])
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(err.message || 'Unable to load hero banners.')
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadInitialBanners()
+
+    return () => controller.abort()
+  }, [])
 
   function updateField(event) {
     const { name, value } = event.target
@@ -166,7 +191,7 @@ export default function HeroBannerManager() {
       setForm(EMPTY_FORM)
       setEditingId(null)
 
-      await loadBanners()
+      await refreshBanners()
     } catch (err) {
       setError(err.message || 'Unable to save the banner.')
     } finally {
@@ -204,7 +229,7 @@ export default function HeroBannerManager() {
       }
 
       setNotice('Banner deleted successfully.')
-      await loadBanners()
+      await refreshBanners()
     } catch (err) {
       setError(err.message || 'Unable to delete the banner.')
     } finally {
@@ -416,7 +441,7 @@ export default function HeroBannerManager() {
 
           <button
             type="button"
-            onClick={loadBanners}
+            onClick={refreshBanners}
             disabled={loading}
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
           >

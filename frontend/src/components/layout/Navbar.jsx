@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const API_URL = (
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
@@ -27,7 +27,6 @@ export default function Navbar() {
   const [sessionLoading, setSessionLoading] = useState(true)
 
   const profileRef = useRef(null)
-  const location = useLocation()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -71,11 +70,6 @@ export default function Navbar() {
 
     return () => controller.abort()
   }, [])
-
-  useEffect(() => {
-    setMenuOpen(false)
-    setProfileOpen(false)
-  }, [location.pathname, location.hash])
 
   useEffect(() => {
     function closeProfile(event) {
