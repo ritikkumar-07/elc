@@ -1,26 +1,18 @@
-import crypto from 'crypto'
-import fs from 'fs'
-import path from 'path'
 
 import multer from 'multer'
+import crypto from 'crypto'
+import path from 'path'
+import { v2 as cloudinary } from 'cloudinary'
 
-const uploadDirectory = path.resolve(
-  process.env.UPLOAD_DIR || 'uploads',
-)
-
-fs.mkdirSync(uploadDirectory, { recursive: true })
-
-const storage = multer.diskStorage({
-  destination(req, file, callback) {
-    callback(null, uploadDirectory)
-  },
-  filename(req, file, callback) {
-    callback(null, `${Date.now()}-${crypto.randomUUID()}.pdf`)
-  },
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
 })
 
 const pdfOnly = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024,
     files: 1,
@@ -36,15 +28,13 @@ const pdfOnly = multer({
       )
     }
 
-    return callback(null, true)
+    callback(null, true)
   },
 })
 
 export function uploadPdf(req, res, next) {
   pdfOnly.single('file')(req, res, (error) => {
-    if (!error) {
-      return next()
-    }
+    if (!error) return next()
 
     if (error instanceof multer.MulterError) {
       const message =
@@ -58,22 +48,44 @@ export function uploadPdf(req, res, next) {
       })
     }
 
-    return next(error)
+    next(error)
   })
 }
 
-export function uploadedFilePath(storedName) {
-  return path.join(uploadDirectory, path.basename(storedName))
+export async function uploadPdfToCloudinary(file) {
+  if (!file?.buffer) {
+    throw new Error('PDF file buffer is missing.')
+  }
+
+  const publicId = `elc-materials/${crypto.randomUUID()}.pdf`
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'raw',
+        public_id: publicId,
+        overwrite: false,
+        format: 'pdf',
+      },
+      (error, result) => {
+        if (error) return reject(error)
+        resolve(result)
+      },
+    )
+
+    stream.end(file.buffer)
+  })
 }
 
-export function removeUploadedFile(storedName) {
-  if (!storedName) return
+export async function removeUploadedFile(publicId) {
+  if (!publicId) return
 
-  const filePath = uploadedFilePath(storedName)
-
-  fs.promises.unlink(filePath).catch((error) => {
-    if (error.code !== 'ENOENT') {
-      console.error('Unable to remove uploaded file:', error.message)
-    }
-  })
+  try {
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: 'raw',
+      invalidate: true,
+    })
+  } catch (error) {
+    console.error('Unable to remove Cloudinary PDF:', error.message)
+  }
 }

@@ -1,4 +1,3 @@
-import fs from 'fs'
 import mongoose from 'mongoose'
 import { z } from 'zod'
 
@@ -7,7 +6,7 @@ import StudyMaterial from '../models/StudyMaterial.js'
 import Subject from '../models/Subject.js'
 import {
   removeUploadedFile,
-  uploadedFilePath,
+  uploadPdfToCloudinary,
 } from '../middleware/uploadMiddleware.js'
 import {
   escapeRegex,
@@ -225,6 +224,8 @@ export async function listMaterials(req, res, next) {
 }
 
 export async function createMaterial(req, res, next) {
+  let uploadedAsset = null
+
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -236,7 +237,6 @@ export async function createMaterial(req, res, next) {
     const parsed = materialCreateSchema.safeParse(req.body)
 
     if (!parsed.success) {
-      removeUploadedFile(req.file.filename)
       return validationError(
         res,
         parsed.error,
@@ -244,13 +244,9 @@ export async function createMaterial(req, res, next) {
       )
     }
 
-    const allowed = await canWriteClass(
-      req.user,
-      parsed.data.classId,
-    )
+    const allowed = await canWriteClass(req.user, parsed.data.classId)
 
     if (!allowed) {
-      removeUploadedFile(req.file.filename)
       return res.status(403).json({
         success: false,
         message: 'You can only upload materials for your classes.',
@@ -263,12 +259,14 @@ export async function createMaterial(req, res, next) {
     )
 
     if (parsed.data.subjectId && !subject) {
-      removeUploadedFile(req.file.filename)
       return res.status(400).json({
         success: false,
         message: 'The selected subject does not belong to this class.',
       })
     }
+
+    // Upload only after validating all metadata and authorization.
+    uploadedAsset = await uploadPdfToCloudinary(req.file)
 
     const material = await StudyMaterial.create({
       title: parsed.data.title,
@@ -277,7 +275,11 @@ export async function createMaterial(req, res, next) {
       class: parsed.data.classId,
       subject: subject?._id || null,
       fileName: req.file.originalname,
-      storedName: req.file.filename,
+      // Keep required legacy field populated for compatibility.
+      storedName: uploadedAsset.public_id,
+      cloudinaryPublicId: uploadedAsset.public_id,
+      cloudinaryResourceType: uploadedAsset.resource_type || 'raw',
+      cloudinaryUrl: uploadedAsset.secure_url,
       mimeType: 'application/pdf',
       size: req.file.size,
       uploadedBy: req.user._id,
@@ -294,7 +296,9 @@ export async function createMaterial(req, res, next) {
       data: materialResponse(created),
     })
   } catch (error) {
-    removeUploadedFile(req.file?.filename)
+    if (uploadedAsset?.public_id) {
+      await removeUploadedFile(uploadedAsset.public_id)
+    }
     return next(error)
   }
 }
@@ -411,14 +415,13 @@ export async function downloadMaterial(req, res, next) {
       return invalidId(res, 'material ID')
     }
 
-    const material = await StudyMaterial.findById(
-      req.params.id,
-    ).lean()
+    const material = await StudyMaterial.findById(req.params.id).lean()
 
     if (!material) {
       return notFound(res, 'Study material not found.')
     }
 
+    // Keep the existing class/publication authorization rules.
     if (isStudent(req.user)) {
       if (
         String(material.class) !== String(req.user.class || '') ||
@@ -438,29 +441,37 @@ export async function downloadMaterial(req, res, next) {
         success: false,
         message: 'You do not have access to this material.',
       })
+    } else if (!isTeacher(req.user) && !isAdmin(req.user) && !isStudent(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have access to this material.',
+      })
     }
 
-    const filePath = uploadedFilePath(material.storedName)
+    const assetUrl = material.cloudinaryUrl
+    if (!assetUrl || !material.cloudinaryPublicId) {
+      return notFound(
+        res,
+        'This PDF is not stored in Cloudinary yet. Legacy files need to be migrated.',
+      )
+    }
 
-    try {
-      await fs.promises.access(filePath, fs.constants.R_OK)
-    } catch {
+    // Proxy the PDF through this authenticated endpoint so the browser does
+    // not receive the Cloudinary URL in the API response.
+    const upstream = await fetch(assetUrl)
+
+    if (!upstream.ok || !upstream.body) {
+      console.error('Cloudinary PDF fetch failed:', upstream.status)
       return notFound(res, 'The stored PDF file is unavailable.')
     }
 
     res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(material.fileName || 'material.pdf')}`)
     res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Cache-Control', 'private, no-store')
 
-    return res.download(
-      filePath,
-      material.fileName,
-      { headers: { 'Content-Type': 'application/pdf' } },
-      (error) => {
-        if (error && !res.headersSent) {
-          next(error)
-        }
-      },
-    )
+    const { Readable } = await import('node:stream')
+    return Readable.fromWeb(upstream.body).pipe(res)
   } catch (error) {
     return next(error)
   }

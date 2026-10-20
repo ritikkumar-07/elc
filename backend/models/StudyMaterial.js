@@ -42,6 +42,20 @@ const studyMaterialSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+
+    cloudinaryPublicId: {
+      type: String,
+      default: null,
+    },
+    cloudinaryResourceType: {
+      type: String,
+      default: 'raw',
+    },
+    cloudinaryUrl: {
+      type: String,
+      default: null,
+    },
+
     mimeType: {
       type: String,
       default: 'application/pdf',
