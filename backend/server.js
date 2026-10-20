@@ -142,6 +142,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
 
 const app = express()
+app.set('trust proxy', 1)
 const PORT = Number(process.env.PORT) || 5000
 
 app.use(helmet())
@@ -166,7 +167,7 @@ app.use(
       return callback(new Error('Origin not allowed by CORS'))
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 )
