@@ -2,9 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/$/, '')
+import { useAuth } from '../../context/AuthContext.jsx'
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -21,55 +19,12 @@ const dashboardRoutes = {
 }
 
 export default function Navbar() {
-  const [user, setUser] = useState(null)
+  const { user, loading: sessionLoading, logout } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [sessionLoading, setSessionLoading] = useState(true)
 
   const profileRef = useRef(null)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    async function loadSession() {
-      try {
-        const response = await fetch(`${API_URL}/api/v1/auth/me`, {
-          method: 'GET',
-          credentials: 'include',
-          cache: 'no-store',
-          signal: controller.signal,
-        })
-
-        if (response.status === 401) {
-          setUser(null)
-          return
-        }
-
-        if (!response.ok) return
-
-        const data = await response.json()
-
-        if (data.success && data.user) {
-          setUser(data.user)
-        } else {
-          setUser(null)
-        }
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Unable to check login session:', error)
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setSessionLoading(false)
-        }
-      }
-    }
-
-    loadSession()
-
-    return () => controller.abort()
-  }, [])
 
   useEffect(() => {
     function closeProfile(event) {
@@ -106,24 +61,10 @@ export default function Navbar() {
   const initial = displayName.charAt(0).toUpperCase()
 
   async function handleLogout() {
-    try {
-      const response = await fetch(`${API_URL}/api/v1/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        console.error('Logout request failed')
-        return
-      }
-
-      setUser(null)
-      setProfileOpen(false)
-      setMenuOpen(false)
-      navigate('/')
-    } catch (error) {
-      console.error('Unable to log out:', error)
-    }
+    await logout()
+    setProfileOpen(false)
+    setMenuOpen(false)
+    navigate('/')
   }
 
   return (

@@ -2,9 +2,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/$/, '')
+import { useAuth } from '../../context/AuthContext.jsx'
 
 const roles = [
   { value: 'student', label: 'Student' },
@@ -14,6 +12,7 @@ const roles = [
 
 export default function LoginForm() {
   const navigate = useNavigate()
+  const { login, logout } = useAuth()
 
   const [role, setRole] = useState('student')
   const [email, setEmail] = useState('')
@@ -34,38 +33,20 @@ export default function LoginForm() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          password,
-        }),
+      const authenticatedUser = await login({
+        email: email.trim().toLowerCase(),
+        password,
       })
 
-      const result = await response.json().catch(() => ({}))
-
-      if (!response.ok || !result.success || !result.user) {
-        throw new Error(
-          result.message || 'Unable to sign in. Please try again.'
-        )
-      }
-
-      const actualRole = result.user.role
+      const actualRole = authenticatedUser.role
 
       if (actualRole !== role) {
-        // The backend role is authoritative; the dropdown is only a check.
-        await fetch(`${API_URL}/api/v1/auth/logout`, {
-          method: 'POST',
-          credentials: 'include',
-        }).catch(() => {})
+        await logout()
 
         throw new Error(
           `This account is registered as ${
-            roles.find((item) => item.value === actualRole)?.label || actualRole
+            roles.find((item) => item.value === actualRole)?.label ||
+            actualRole
           }. Please select the correct account type.`
         )
       }
@@ -79,7 +60,7 @@ export default function LoginForm() {
       navigate(destinations[actualRole] || '/', { replace: true })
     } catch (err) {
       setError(
-        err instanceof TypeError
+        err.status === 0
           ? 'Cannot connect to the ELC server. Make sure the backend is running on port 5000.'
           : err.message || 'Something went wrong. Please try again.'
       )

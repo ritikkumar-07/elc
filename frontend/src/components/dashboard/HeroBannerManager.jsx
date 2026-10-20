@@ -1,9 +1,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/+$/, '')
+import { apiRequest } from '../../lib/api.js'
 
 const EMPTY_FORM = {
   eyebrow: '',
@@ -11,28 +9,8 @@ const EMPTY_FORM = {
   description: '',
   imageUrl: '',
   altText: '',
-}
-
-async function apiRequest(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    credentials: 'include',
-    cache: 'no-store',
-    ...options,
-    headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  })
-
-  const result = await response.json().catch(() => ({}))
-
-  if (!response.ok || result.success === false) {
-    throw new Error(
-      result.message || `Request failed with status ${response.status}.`,
-    )
-  }
-
-  return result
+  order: '',
+  isPublished: true,
 }
 
 function getBannerId(banner) {
@@ -51,7 +29,7 @@ export default function HeroBannerManager() {
 
   const loadBanners = useCallback(async () => {
     try {
-      const result = await apiRequest('/api/v1/hero-banners')
+      const result = await apiRequest('/api/v1/hero-banners/manage')
 
       setBanners(Array.isArray(result.data) ? result.data : [])
     } catch (err) {
@@ -72,7 +50,7 @@ export default function HeroBannerManager() {
 
     async function loadInitialBanners() {
       try {
-        const result = await apiRequest('/api/v1/hero-banners', {
+        const result = await apiRequest('/api/v1/hero-banners/manage', {
           signal: controller.signal,
         })
 
@@ -94,11 +72,11 @@ export default function HeroBannerManager() {
   }, [])
 
   function updateField(event) {
-    const { name, value } = event.target
+    const { name, value, type, checked } = event.target
 
     setForm((current) => ({
       ...current,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }))
   }
 
@@ -118,6 +96,8 @@ export default function HeroBannerManager() {
       description: banner.description || '',
       imageUrl: banner.imageUrl || '',
       altText: banner.altText || '',
+      order: banner.order ?? '',
+      isPublished: banner.isPublished !== false,
     })
 
     setError('')
@@ -141,6 +121,9 @@ export default function HeroBannerManager() {
       description: form.description.trim(),
       imageUrl: form.imageUrl.trim(),
       altText: form.altText.trim(),
+      order:
+        form.order === '' ? undefined : Number(form.order),
+      isPublished: Boolean(form.isPublished),
     }
 
     if (
@@ -174,7 +157,7 @@ export default function HeroBannerManager() {
           `/api/v1/hero-banners/${encodeURIComponent(editingId)}`,
           {
             method: 'PUT',
-            body: JSON.stringify(payload),
+            body: payload,
           },
         )
 
@@ -182,7 +165,7 @@ export default function HeroBannerManager() {
       } else {
         await apiRequest('/api/v1/hero-banners', {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: payload,
         })
 
         setNotice('Banner added successfully.')
@@ -234,6 +217,37 @@ export default function HeroBannerManager() {
       setError(err.message || 'Unable to delete the banner.')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  async function togglePublished(banner) {
+    const id = getBannerId(banner)
+
+    if (!id) {
+      setError('This banner has no valid ID.')
+      return
+    }
+
+    setError('')
+    setNotice('')
+
+    try {
+      await apiRequest(
+        `/api/v1/hero-banners/${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          body: { isPublished: !banner.isPublished },
+        },
+      )
+
+      setNotice(
+        banner.isPublished
+          ? 'Banner unpublished.'
+          : 'Banner published on the homepage.',
+      )
+      await refreshBanners()
+    } catch (err) {
+      setError(err.message || 'Unable to change publishing status.')
     }
   }
 
@@ -400,6 +414,39 @@ export default function HeroBannerManager() {
             </p>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="banner-order"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Display order
+              </label>
+
+              <input
+                id="banner-order"
+                name="order"
+                type="number"
+                min="0"
+                value={form.order}
+                onChange={updateField}
+                placeholder="0"
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <label className="flex items-end gap-3 pb-3 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                name="isPublished"
+                checked={form.isPublished}
+                onChange={updateField}
+                className="h-4 w-4"
+              />
+              Published on homepage
+            </label>
+          </div>
+
           <div className="flex flex-wrap gap-3 pt-2">
             <button
               type="submit"
@@ -489,6 +536,16 @@ export default function HeroBannerManager() {
                     <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
                       {banner.eyebrow || 'Hero banner'}
                     </span>
+
+                    <span
+                      className={`absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
+                        banner.isPublished
+                          ? 'bg-emerald-50 text-emerald-800'
+                          : 'bg-amber-50 text-amber-800'
+                      }`}
+                    >
+                      {banner.isPublished ? 'Published' : 'Draft'}
+                    </span>
                   </div>
 
                   <div className="space-y-3 p-5">
@@ -501,6 +558,10 @@ export default function HeroBannerManager() {
                     </p>
 
                     <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-4">
+                      <span className="self-center text-xs text-slate-500">
+                        Order {banner.order ?? 0}
+                      </span>
+
                       <button
                         type="button"
                         onClick={() => startEditing(banner)}
@@ -508,6 +569,15 @@ export default function HeroBannerManager() {
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                       >
                         Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => togglePublished(banner)}
+                        disabled={!id || saving || deletingId !== null}
+                        className="rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-50 disabled:opacity-50"
+                      >
+                        {banner.isPublished ? 'Unpublish' : 'Publish'}
                       </button>
 
                       <button

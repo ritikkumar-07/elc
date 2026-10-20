@@ -57,3 +57,27 @@ img {
   color: #ffffff;
   background: #1e3a8a;
 }
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  .elc-layout {
+    min-height: auto;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  section,
+  article {
+    break-inside: avoid;
+  }
+}

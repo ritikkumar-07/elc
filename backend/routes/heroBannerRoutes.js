@@ -1,4 +1,3 @@
-
 import { Router } from 'express'
 import mongoose from 'mongoose'
 import { z } from 'zod'
@@ -11,49 +10,50 @@ import {
 
 const router = Router()
 
-const bannerSchema = z.object({
+const urlField = z
+  .string()
+  .trim()
+  .url()
+  .max(2048)
+  .refine((value) => {
+    try {
+      return ['http:', 'https:'].includes(new URL(value).protocol)
+    } catch {
+      return false
+    }
+  }, 'Image URL must use HTTP or HTTPS.')
+
+const bannerFields = {
   eyebrow: z.string().trim().min(1).max(120),
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1).max(1000),
-  imageUrl: z
-    .string()
-    .trim()
-    .url()
-    .max(2048)
-    .refine((value) => {
-      try {
-        return ['http:', 'https:'].includes(
-          new URL(value).protocol,
-        )
-      } catch {
-        return false
-      }
-    }, 'Image URL must use HTTP or HTTPS.'),
+  imageUrl: urlField,
   altText: z.string().trim().min(1).max(300),
-})
+  order: z.coerce.number().int().min(0).max(100000).optional(),
+  isPublished: z.boolean().optional(),
+}
 
-const adminOnly = [
-  requireAuth,
-  allowRoles('admin'),
-]
+const createSchema = z.object(bannerFields).strict()
+const updateSchema = z.object(bannerFields).partial().strict()
 
-function validateBanner(req, res) {
-  const result = bannerSchema.safeParse(req.body)
+const adminOnly = [requireAuth, allowRoles('admin')]
 
-  if (!result.success) {
-    res.status(400).json({
-      success: false,
-      message: 'Please check the banner fields.',
-      errors: result.error.issues.map((issue) => ({
-        field: issue.path.join('.'),
-        message: issue.message,
-      })),
-    })
+function validationResponse(res, error) {
+  return res.status(400).json({
+    success: false,
+    message: 'Please check the banner fields.',
+    errors: error.issues.map((issue) => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+    })),
+  })
+}
 
-    return null
+function bannerResponse(banner) {
+  return {
+    ...banner,
+    id: String(banner._id),
   }
-
-  return result.data
 }
 
 // GET: Published banners for the public homepage.
@@ -68,14 +68,14 @@ router.get('/', async (req, res, next) => {
     res.json({
       success: true,
       count: banners.length,
-      data: banners,
+      data: banners.map(bannerResponse),
     })
   } catch (error) {
     next(error)
   }
 })
 
-// GET: All banners for Director/Admin.
+// GET: All banners for administrators.
 router.get('/manage', ...adminOnly, async (req, res, next) => {
   try {
     const banners = await HeroBanner.find()
@@ -85,7 +85,7 @@ router.get('/manage', ...adminOnly, async (req, res, next) => {
     res.json({
       success: true,
       count: banners.length,
-      data: banners,
+      data: banners.map(bannerResponse),
     })
   } catch (error) {
     next(error)
@@ -95,32 +95,41 @@ router.get('/manage', ...adminOnly, async (req, res, next) => {
 // POST: Create a banner.
 router.post('/', ...adminOnly, async (req, res, next) => {
   try {
-    const data = validateBanner(req, res)
-    if (!data) return
+    const parsed = createSchema.safeParse(req.body)
 
-    const lastBanner = await HeroBanner.findOne()
-      .sort({ order: -1 })
-      .select('order')
-      .lean()
+    if (!parsed.success) {
+      return validationResponse(res, parsed.error)
+    }
+
+    let order = parsed.data.order
+
+    if (order === undefined) {
+      const lastBanner = await HeroBanner.findOne()
+        .sort({ order: -1 })
+        .select('order')
+        .lean()
+
+      order = (lastBanner?.order ?? -1) + 1
+    }
 
     const banner = await HeroBanner.create({
-      ...data,
-      order: (lastBanner?.order ?? -1) + 1,
-      isPublished: true,
+      ...parsed.data,
+      order,
+      isPublished: parsed.data.isPublished ?? true,
     })
 
     res.status(201).json({
       success: true,
       message: 'Hero banner created successfully.',
-      data: banner,
+      data: bannerResponse(banner.toObject()),
     })
   } catch (error) {
     next(error)
   }
 })
 
-// PUT: Update a banner.
-router.put('/:id', ...adminOnly, async (req, res, next) => {
+// PUT/PATCH: Update a banner, including publishing state and order.
+async function updateBanner(req, res, next) {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({
@@ -129,17 +138,21 @@ router.put('/:id', ...adminOnly, async (req, res, next) => {
       })
     }
 
-    const data = validateBanner(req, res)
-    if (!data) return
+    const schema = req.method === 'PUT' ? createSchema : updateSchema
+    const parsed = schema.safeParse(req.body)
+
+    if (!parsed.success) {
+      return validationResponse(res, parsed.error)
+    }
 
     const banner = await HeroBanner.findByIdAndUpdate(
       req.params.id,
-      { $set: data },
+      { $set: parsed.data },
       {
         new: true,
         runValidators: true,
       },
-    )
+    ).lean()
 
     if (!banner) {
       return res.status(404).json({
@@ -151,12 +164,15 @@ router.put('/:id', ...adminOnly, async (req, res, next) => {
     res.json({
       success: true,
       message: 'Hero banner updated successfully.',
-      data: banner,
+      data: bannerResponse(banner),
     })
   } catch (error) {
     next(error)
   }
-})
+}
+
+router.put('/:id', ...adminOnly, updateBanner)
+router.patch('/:id', ...adminOnly, updateBanner)
 
 // DELETE: Remove a banner.
 router.delete('/:id', ...adminOnly, async (req, res, next) => {
@@ -182,7 +198,7 @@ router.delete('/:id', ...adminOnly, async (req, res, next) => {
     res.json({
       success: true,
       message: 'Hero banner deleted successfully.',
-      data: { id: banner._id },
+      data: { id: String(banner._id) },
     })
   } catch (error) {
     next(error)

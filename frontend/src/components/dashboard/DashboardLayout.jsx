@@ -1,41 +1,77 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+
+import { useAuth } from '../../context/AuthContext.jsx'
+import { apiRequest } from '../../lib/api.js'
 import Footer from '../layout/Footer.jsx'
 import './DashboardBorders.css'
 
-const items = [
-  {
-    section: 'MAIN',
-    links: [
-      ['Overview', '/admin', '▦'],
-      ['Students', '/admin/students', '♙'],
-      ['Teachers', '/admin/teachers', '♧'],
-      ['Registration Approvals', '/admin/registrations', '✓'],
-    ],
-  },
-  {
-    section: 'ACADEMICS',
-    links: [
-      ['Classes & Subjects', '/admin/classes', '▤'],
-      ['Study Materials', '/admin/notes', '▧'],
-      ['Tests & Papers', '/admin/tests', '✓'],
-      ['Results', '/admin/results', '↗'],
-      ['Attendance', '/admin/attendance', '◷'],
-    ],
-  },
-  {
-    section: 'INSTITUTE',
-    links: [
-      ['Topper Management', '/demo/toppers', '☆'],
-      ['Announcements', '/admin/announcements', '♧'],
-    ],
-  },
-]
-
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/$/, '')
+const roleItems = {
+  admin: [
+    {
+      section: 'MAIN',
+      links: [
+        ['Overview', '/admin', '▦'],
+        ['Students', '/admin/students', '♙'],
+        ['Teachers', '/admin/teachers', '♧'],
+        ['Registration Approvals', '/admin/registrations', '✓'],
+      ],
+    },
+    {
+      section: 'ACADEMICS',
+      links: [
+        ['Classes & Subjects', '/admin/classes', '▤'],
+        ['Study Materials', '/admin/notes', '▧'],
+        ['Tests & Papers', '/admin/tests', '✓'],
+        ['Results Analytics', '/admin/results', '↗'],
+        ['Attendance', '/admin/attendance', '◷'],
+        ['Announcements', '/admin/announcements', '♧'],
+      ],
+    },
+    {
+      section: 'INSTITUTE',
+      links: [
+        ['Topper Management', '/admin/toppers', '☆'],
+        ['Hero Banners', '/admin/hero-banners', '▣'],
+      ],
+    },
+  ],
+  teacher: [
+    {
+      section: 'MAIN',
+      links: [
+        ['Overview', '/teacher', '▦'],
+        ['My Students', '/teacher/students', '♙'],
+      ],
+    },
+    {
+      section: 'ACADEMICS',
+      links: [
+        ['Study Materials', '/teacher/notes', '▧'],
+        ['Tests & Results', '/teacher/tests', '✓'],
+        ['Results Analytics', '/teacher/results', '↗'],
+        ['Attendance', '/teacher/attendance', '◷'],
+        ['Announcements', '/teacher/announcements', '♧'],
+      ],
+    },
+  ],
+  student: [
+    {
+      section: 'MAIN',
+      links: [['Overview', '/student', '▦']],
+    },
+    {
+      section: 'LEARNING',
+      links: [
+        ['Class Notes', '/student/notes', '▧'],
+        ['Tests', '/student/tests', '✓'],
+        ['My Results', '/student/results', '↗'],
+        ['Attendance', '/student/attendance', '◷'],
+      ],
+    },
+  ],
+}
 
 function Initials({ name }) {
   return (name || 'ELC')
@@ -52,6 +88,10 @@ export default function DashboardLayout({
   onLogout,
   children,
 }) {
+  const auth = useAuth()
+  const currentUser = user || auth.user
+  const layoutLogout = onLogout || auth.logout
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
   const [modal, setModal] = useState(null)
@@ -64,14 +104,7 @@ export default function DashboardLayout({
 
   const menuRef = useRef(null)
 
-  const visibleItems =
-    user?.role === 'admin'
-      ? items
-      : user?.role === 'teacher'
-        ? [{ section: 'MAIN', links: [['Overview', '/teacher', '▦']] }]
-        : user?.role === 'student'
-          ? [{ section: 'MAIN', links: [['Overview', '/student', '▦']] }]
-          : []
+  const visibleItems = roleItems[currentUser?.role] || []
 
   useEffect(() => {
     function handleOutsideClick(event) {
@@ -119,28 +152,10 @@ export default function DashboardLayout({
     setSaving(true)
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/v1/auth/change-password`,
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            currentPassword,
-            newPassword,
-          }),
-        }
-      )
-
-      const data = await response.json().catch(() => ({}))
-
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || 'Unable to change password.'
-        )
-      }
+      await apiRequest('/api/v1/auth/change-password', {
+        method: 'POST',
+        body: { currentPassword, newPassword },
+      })
 
       setPasswordMessage('Password changed successfully.')
       setCurrentPassword('')
@@ -156,16 +171,16 @@ export default function DashboardLayout({
   }
 
   const dashboardPath =
-    user?.role === 'teacher'
+    currentUser?.role === 'teacher'
       ? '/teacher'
-      : user?.role === 'student'
+      : currentUser?.role === 'student'
         ? '/student'
         : '/admin'
 
   return (
     <div className="elc-layout flex min-h-screen flex-col bg-white text-slate-900">
       {/* Shared ELC navbar */}
-      <header className="sticky top-0 z-50 w-full shrink-0 border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-50 w-full shrink-0 border-b border-slate-200 bg-white print:hidden">
         <div className="mx-auto flex min-h-[72px] w-full items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
           <Link
             to="/"
@@ -218,11 +233,11 @@ export default function DashboardLayout({
                 className="flex min-h-10 items-center gap-1.5 rounded-full px-1 py-1 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:gap-2 sm:px-1.5"
               >
                 <span className="grid h-9 w-9 place-items-center rounded-full bg-blue-100 text-sm font-bold text-[#19366e]">
-                  <Initials name={user?.name} />
+                  <Initials name={currentUser?.name} />
                 </span>
 
                 <span className="hidden max-w-[120px] truncate text-sm font-medium text-slate-700 sm:block">
-                  {user?.name || 'Account'}
+                  {currentUser?.name || 'Account'}
                 </span>
 
                 <span
@@ -240,10 +255,10 @@ export default function DashboardLayout({
                 >
                   <div className="border-b border-slate-100 px-4 py-3">
                     <p className="truncate text-sm font-semibold text-slate-900">
-                      {user?.name || 'ELC User'}
+                      {currentUser?.name || 'ELC User'}
                     </p>
                     <p className="mt-1 break-all text-xs text-slate-500">
-                      {user?.email}
+                      {currentUser?.email}
                     </p>
                   </div>
 
@@ -277,7 +292,7 @@ export default function DashboardLayout({
                     role="menuitem"
                     onClick={() => {
                       setProfileMenu(false)
-                      onLogout?.()
+                      layoutLogout?.()
                     }}
                     className="block w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                   >
@@ -298,14 +313,14 @@ export default function DashboardLayout({
             type="button"
             aria-label="Close dashboard navigation"
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-x-0 bottom-0 top-[72px] z-30 bg-black/30 lg:hidden"
+            className="fixed inset-x-0 bottom-0 top-[72px] z-30 bg-black/30 lg:hidden print:hidden"
           />
         )}
 
         {/* Dashboard sidebar */}
         <aside
           id="dashboard-sidebar"
-          className={`fixed bottom-0 left-0 top-[72px] z-40 w-[min(82vw,300px)] overflow-y-auto border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out lg:sticky lg:bottom-auto lg:left-auto lg:top-0 lg:z-20 lg:h-[calc(100vh-72px)] lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:shadow-none ${
+          className={`fixed bottom-0 left-0 top-[72px] z-40 w-[min(82vw,300px)] overflow-y-auto border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out lg:sticky lg:bottom-auto lg:left-auto lg:top-0 lg:z-20 lg:h-[calc(100vh-72px)] lg:w-[240px] lg:shrink-0 lg:translate-x-0 lg:shadow-none print:hidden ${
               sidebarOpen ? 'translate-x-0'
               : '-translate-x-full'
           }`}
@@ -340,6 +355,7 @@ export default function DashboardLayout({
                   <NavLink
                     key={path}
                     to={path}
+                    end={path === `/${currentUser?.role}`}
                     onClick={() => setSidebarOpen(false)}
                     className={({ isActive }) =>
                       `flex min-h-[48px] items-center gap-4 border-l-[3px] px-6 text-[13px] transition ${
@@ -376,7 +392,7 @@ export default function DashboardLayout({
         {/* Main dashboard area */}
         <div className="flex min-h-[calc(100vh-72px)] min-w-0 flex-1 flex-col bg-white">
           {/* Mobile dashboard toolbar */}
-          <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 lg:hidden">
+          <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 lg:hidden print:hidden">
             <button
               type="button"
               aria-label="Open dashboard navigation"
@@ -396,14 +412,14 @@ export default function DashboardLayout({
             </Link>
           </div>
 
-          <main className="mx-auto w-full max-w-[1700px] flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main className="mx-auto w-full max-w-[1700px] flex-1 px-4 py-6 sm:px-6 lg:px-8 print:max-w-none print:px-0 print:py-0">
             {children}
           </main>
         </div>
       </div>
 
       {/* Shared public footer: full viewport width, below sidebar and content */}
-      <div className="relative z-0 w-full shrink-0">
+      <div className="relative z-0 w-full shrink-0 print:hidden">
         <Footer />
       </div>
 
@@ -447,17 +463,17 @@ export default function DashboardLayout({
               <div className="mt-5 space-y-3 text-sm">
                 <p>
                   <span className="text-slate-500">Name:</span>{' '}
-                  <strong>{user?.name}</strong>
+                  <strong>{currentUser?.name}</strong>
                 </p>
 
                 <p className="break-all">
                   <span className="text-slate-500">Email:</span>{' '}
-                  {user?.email}
+                  {currentUser?.email}
                 </p>
 
                 <p>
                   <span className="text-slate-500">Role:</span>{' '}
-                  {user?.role}
+                  {currentUser?.role}
                 </p>
 
                 <button

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 const API_URL = (
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
@@ -9,6 +10,7 @@ const API_URL = (
 
 export default function RegistrationApprovals() {
   const navigate = useNavigate()
+  const { logout } = useAuth()
 
   const [admin, setAdmin] = useState(null)
   const [registrations, setRegistrations] = useState([])
@@ -111,14 +113,8 @@ export default function RegistrationApprovals() {
   }, [navigate, reloadKey])
 
   async function handleLogout() {
-    try {
-      await fetch(`${API_URL}/api/v1/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-    } finally {
-      navigate('/login', { replace: true })
-    }
+    await logout()
+    navigate('/login', { replace: true })
   }
 
   async function handleDecision(user, action) {

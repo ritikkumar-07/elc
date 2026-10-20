@@ -130,6 +130,16 @@ import topperRoutes from './routes/topperRoutes.js'
 import authRoutes from './routes/authRoutes.js'
 import heroBannerRoutes from './routes/heroBannerRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
+import studentRoutes from './routes/studentRoutes.js'
+import teacherRoutes from './routes/teacherRoutes.js'
+import teacherPortalRoutes from './routes/teacherPortalRoutes.js'
+import academicRoutes from './routes/academicRoutes.js'
+import materialRoutes from './routes/materialRoutes.js'
+import testRoutes from './routes/testRoutes.js'
+import announcementRoutes from './routes/announcementRoutes.js'
+import attendanceRoutes from './routes/attendanceRoutes.js'
+import dashboardRoutes from './routes/dashboardRoutes.js'
+import analyticsRoutes from './routes/analyticsRoutes.js'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 5000
@@ -182,6 +192,16 @@ app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/toppers', topperRoutes)
 app.use('/api/v1/hero-banners', heroBannerRoutes)
 app.use('/api/v1/admin', adminRoutes)
+app.use('/api/v1/students', studentRoutes)
+app.use('/api/v1/teachers', teacherRoutes)
+app.use('/api/v1/teacher', teacherPortalRoutes)
+app.use('/api/v1/academics', academicRoutes)
+app.use('/api/v1/materials', materialRoutes)
+app.use('/api/v1/tests', testRoutes)
+app.use('/api/v1/announcements', announcementRoutes)
+app.use('/api/v1/attendance', attendanceRoutes)
+app.use('/api/v1/dashboard', dashboardRoutes)
+app.use('/api/v1/analytics', analyticsRoutes)
 
 // Health check
 app.get('/api/v1/health', (req, res) => {

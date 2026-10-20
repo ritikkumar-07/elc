@@ -1,5 +1,9 @@
 import TopperCard from './TopperCard.jsx'
 
+function getId(topper) {
+  return topper.id || topper._id
+}
+
 export default function TopperList({
   toppers,
   onEdit,
@@ -16,47 +20,57 @@ export default function TopperList({
 
   return (
     <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {toppers.map((topper) => (
-        <div key={topper.id} className="space-y-3">
-          <TopperCard topper={topper} />
+      {toppers.map((topper) => {
+        const id = getId(topper)
+        const published = Boolean(topper.isPublished)
 
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3">
-            <span
-              className={`text-xs font-bold ${
-                topper.published ? 'text-green-700' : 'text-amber-700'
-              }`}
-            >
-              {topper.published ? 'Published' : 'Draft'}
-            </span>
+        return (
+          <div key={id} className="space-y-3">
+            <TopperCard
+              topper={{
+                ...topper,
+                photo: topper.photoUrl,
+              }}
+            />
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => onEdit(topper)}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3">
+              <span
+                className={`text-xs font-bold ${
+                  published ? 'text-green-700' : 'text-amber-700'
+                }`}
               >
-                Edit
-              </button>
+                {published ? 'Published' : 'Draft'}
+              </span>
 
-              <button
-                type="button"
-                onClick={() => onTogglePublish(topper.id)}
-                className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50"
-              >
-                {topper.published ? 'Unpublish' : 'Publish'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => onEdit(topper)}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
+                >
+                  Edit
+                </button>
 
-              <button
-                type="button"
-                onClick={() => onDelete(topper.id)}
-                className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-              >
-                Delete
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onTogglePublish(topper)}
+                  className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50"
+                >
+                  {published ? 'Unpublish' : 'Publish'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onDelete(topper)}
+                  className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

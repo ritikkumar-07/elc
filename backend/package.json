@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "dev": "node --watch server.js",
     "start": "node server.js",
     "seed:hero-banners": "node scripts/seedHeroBanners.js"
@@ -23,6 +23,7 @@
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.2",
+    "multer": "^2.4.0",
     "zod": "^4.6.7"
   }
 }

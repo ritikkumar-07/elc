@@ -18,4 +18,17 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  {
+    files: ['src/pages/**/*.{js,jsx}'],
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
+  {
+    files: ['src/context/AuthContext.jsx'],
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

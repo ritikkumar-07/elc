@@ -45,11 +45,75 @@ const userSchema = new mongoose.Schema(
       default: 'pending',
       required: true,
     },
+
+    rollNumber: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      maxlength: [30, 'Roll number cannot exceed 30 characters.'],
+    },
+
+    class: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Class',
+      default: null,
+      index: true,
+    },
+
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [30, 'Phone number cannot exceed 30 characters.'],
+      default: '',
+    },
+
+    guardianName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Guardian name cannot exceed 100 characters.'],
+      default: '',
+    },
+
+    guardianPhone: {
+      type: String,
+      trim: true,
+      maxlength: [30, 'Guardian phone cannot exceed 30 characters.'],
+      default: '',
+    },
+
+    admissionDate: {
+      type: Date,
+      default: null,
+    },
+
+    assignedClasses: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Class',
+        },
+      ],
+      default: [],
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 )
+
+userSchema.index(
+  { rollNumber: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      role: 'student',
+      rollNumber: { $exists: true, $type: 'string' },
+    },
+  },
+)
+
+userSchema.index({ role: 1, status: 1, class: 1 })
 
 const User = mongoose.model('User', userSchema)
 
