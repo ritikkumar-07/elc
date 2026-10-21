@@ -57,6 +57,17 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
   const [slides, setSlides] = useState(defaultSlides)
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const [reduceMotion, setReduceMotion] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const updatePreference = () => setReduceMotion(media.matches)
+
+    updatePreference()
+    media.addEventListener('change', updatePreference)
+
+    return () => media.removeEventListener('change', updatePreference)
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -101,14 +112,14 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
 
   // Automatically change slides every 5 seconds.
   useEffect(() => {
-    if (isPaused) return undefined
+    if (isPaused || reduceMotion) return undefined
 
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % slides.length)
     }, 5000)
 
     return () => window.clearInterval(timer)
-  }, [isPaused, slides.length])
+  }, [isPaused, reduceMotion, slides.length])
 
   const previousSlide = () => {
     setActiveIndex(

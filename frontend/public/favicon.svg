@@ -1,7 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">Expert Learning Center</title>
-  <rect width="64" height="64" rx="14" fill="#19366e"/>
-  <path fill="#ffffff" d="M21 13h22v6H27v6h13v6H27v6h16v6H21z"/>
-  <path fill="#e6b34a" d="M17 45c5-2 10-2 15 0 5-2 10-2 15 0v6c-5-2-10-2-15 0-5-2-10-2-15 0z"/>
-  <path fill="#ffffff" opacity=".22" d="M17 51c5-2 10-2 15 0v6c-5-2-10-2-15 0z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="elc-favicon-title">
+  <title id="elc-favicon-title">Expert Learning Center</title>
+  <rect width="64" height="64" rx="12" fill="#19366e"/>
+  <path fill="#ffffff" d="M13 11h38v9H24v6h23v8H24v6h27v9H13z"/>
+  <rect x="13" y="54" width="38" height="4" rx="2" fill="#e6b34a"/>
 </svg>

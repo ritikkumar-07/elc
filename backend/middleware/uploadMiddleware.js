@@ -32,9 +32,26 @@ const pdfOnly = multer({
   },
 })
 
+export function isPdfBuffer(buffer) {
+  return (
+    Buffer.isBuffer(buffer) &&
+    buffer.length >= 5 &&
+    buffer.subarray(0, 5).toString('latin1') === '%PDF-'
+  )
+}
+
 export function uploadPdf(req, res, next) {
   pdfOnly.single('file')(req, res, (error) => {
-    if (!error) return next()
+    if (!error) {
+      if (req.file && !isPdfBuffer(req.file.buffer)) {
+        return res.status(400).json({
+          success: false,
+          message: 'The uploaded file is not a valid PDF document.',
+        })
+      }
+
+      return next()
+    }
 
     if (error instanceof multer.MulterError) {
       const message =

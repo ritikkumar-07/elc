@@ -9,9 +9,11 @@ import {
 } from 'react-router-dom'
 
 import ProtectedRoute from './components/common/ProtectedRoute.jsx'
+import SeoManager from './components/seo/SeoManager.jsx'
 import { LoadingState } from './components/common/DashboardUI.jsx'
 import Home from './pages/Home.jsx'
 
+const Contact = lazy(() => import('./pages/Contact.jsx'))
 const CourseDetails = lazy(() =>
   import('./pages/CourseDetails.jsx'),
 )
@@ -132,6 +134,7 @@ function Protected({ roles, children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <SeoManager />
       <ScrollManager />
       <Suspense
         fallback={<LoadingState label="Loading..." fullPage />}
@@ -146,6 +149,7 @@ export default function App() {
           path="/courses/:courseId"
           element={<CourseDetails />}
         />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 

@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "node scripts/generate-sitemap.mjs",
+    "seo:sitemap": "node scripts/generate-sitemap.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
