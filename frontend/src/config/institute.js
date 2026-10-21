@@ -1,3 +1,42 @@
+// Public site content release date in YYYY-MM-DD format. Update this only when
+// a meaningful website/content release is made, not on every deployment.
+export const SITE_LAST_UPDATED = '2026-10-21'
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+export function formatSiteLastUpdated(isoDate) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate || ''))
+  if (!match) return ''
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return ''
+  }
+
+  return `${String(day).padStart(2, '0')} ${MONTH_NAMES[month - 1]} ${year}`
+}
+
 const whatsappNumber = '916291089226'
 const whatsappEnquiryMessage =
   'Hello Expert Learning Center, I would like to enquire about admissions. Please share information about available courses, eligibility, fees, and admission procedures. Thank you.'

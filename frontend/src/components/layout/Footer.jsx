@@ -1,7 +1,11 @@
 import { ArrowRight, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { institute } from '../../config/institute.js'
+import {
+  SITE_LAST_UPDATED,
+  formatSiteLastUpdated,
+  institute,
+} from '../../config/institute.js'
 import courses from '../../data/courses.js'
 import SocialLinks from '../common/SocialLinks.jsx'
 
@@ -18,6 +22,8 @@ const linkClass =
   'inline-flex min-h-7 items-center rounded text-slate-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
 
 export default function Footer() {
+  const lastUpdated = formatSiteLastUpdated(SITE_LAST_UPDATED)
+
   return (
     <footer className="bg-[#0d1c36] text-slate-300">
       <div className="mx-auto grid w-full max-w-[1600px] gap-10 px-5 py-12 sm:grid-cols-2 sm:px-8 lg:grid-cols-2 lg:gap-12 lg:px-10 xl:grid-cols-[1.35fr_0.8fr_0.9fr_1.2fr] xl:px-14">
@@ -165,15 +171,18 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-2 px-5 py-5 text-center sm:flex-row sm:px-8 sm:text-left lg:px-10 xl:px-14">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-1.5 px-5 py-5 text-center sm:flex-row sm:gap-4 sm:px-8 sm:text-left lg:px-10 xl:px-14">
           <p className="text-xs leading-5 text-slate-400">
             © {new Date().getFullYear()} {institute.name}. All rights
             reserved.
           </p>
 
-          <p className="text-xs text-slate-500">
-            {institute.tagline}
-          </p>
+          {lastUpdated && (
+            <p className="text-xs leading-5 text-slate-400 sm:text-right">
+              Last updated:{' '}
+              <time dateTime={SITE_LAST_UPDATED}>{lastUpdated}</time>
+            </p>
+          )}
         </div>
       </div>
     </footer>
