@@ -1,3 +1,4 @@
+import { useState } from 'react'
 
 export default function TopperCard({ topper }) {
   const {
@@ -9,17 +10,21 @@ export default function TopperCard({ topper }) {
     photo,
     description,
   } = topper
+  const photoSource = typeof photo === 'string' ? photo.trim() : ''
+  const [failedPhoto, setFailedPhoto] = useState('')
+  const showPhoto = Boolean(photoSource) && failedPhoto !== photoSource
 
   return (
-    <article className="group h-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
-      {/* Student photo */}
-      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
-        {photo ? (
+    <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none">
+      <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-slate-100">
+        {showPhoto ? (
           <img
-            src={photo}
+            src={photoSource}
             alt={`Photo of ${name}`}
             loading="lazy"
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            decoding="async"
+            className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-105 motion-reduce:transform-none"
+            onError={() => setFailedPhoto(photoSource)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-50 to-slate-200">
@@ -28,14 +33,11 @@ export default function TopperCard({ topper }) {
             </div>
           </div>
         )}
-
-
       </div>
 
-      {/* Student information */}
-      <div className="flex h-full flex-col p-5 sm:p-6">
+      <div className="flex flex-1 flex-col p-5 sm:p-6">
         <div>
-          <h3 className="text-xl font-bold leading-snug text-[#14264b]">
+          <h3 className="line-clamp-2 min-h-[3.25rem] text-xl font-bold leading-snug text-[#14264b]">
             {name}
           </h3>
 
@@ -45,7 +47,6 @@ export default function TopperCard({ topper }) {
           </p>
         </div>
 
-        {/* Marks and academic year */}
         <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-[#f0f5ff] p-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 sm:text-xs">
@@ -68,13 +69,12 @@ export default function TopperCard({ topper }) {
           </div>
         </div>
 
-        {/* Description */}
-        <p className="mt-4 text-sm leading-6 text-slate-600">
+        <p className="mt-4 line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-slate-600">
           {description ||
             'Recognised for dedication, consistent effort, and academic achievement.'}
         </p>
 
-        <div className="mt-5 border-t border-slate-100 pt-3">
+        <div className="mt-auto border-t border-slate-100 pt-3">
           <p className="text-xs font-semibold tracking-wide text-slate-400">
             EXPERT LEARNING CENTER
           </p>

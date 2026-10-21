@@ -7,23 +7,37 @@ import {
   allowRoles,
   requireAuth,
 } from '../middleware/authMiddleware.js'
+import {
+  removeUploadedFile,
+  uploadTopperPhoto,
+  uploadTopperPhotoToCloudinary,
+} from '../middleware/uploadMiddleware.js'
 
 const router = Router()
 
+const photoUrlField = z.string().trim().max(1000).optional()
+
+const booleanField = z.preprocess((value) => {
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return value
+}, z.boolean().optional())
+
 const baseFields = {
   name: z.string().trim().min(1).max(100),
-  photoUrl: z.string().trim().max(1000).optional().default(''),
+  photoUrl: photoUrlField,
   className: z.string().trim().min(1).max(50),
   board: z.string().trim().min(1).max(100),
   session: z.string().trim().min(1).max(30),
   description: z.string().trim().max(500).optional().default(''),
   rank: z.coerce.number().int().min(1).max(10000).optional(),
-  isPublished: z.boolean().optional(),
+  isPublished: booleanField,
 }
 
-const createSchema = z
+export const createSchema = z
   .object({
     ...baseFields,
+    photoUrl: photoUrlField.default(''),
     marks: z.coerce.number().min(0).optional(),
     totalMarks: z.coerce.number().min(1).optional(),
     percentage: z.coerce.number().min(0).max(100).optional(),
@@ -52,9 +66,21 @@ const createSchema = z
     },
   )
 
-const updateSchema = z
+export const updateSchema = z
   .object({
-    ...baseFields,
+    name: z.string().trim().min(1).max(100).optional(),
+    photoUrl: photoUrlField,
+    className: z.string().trim().min(1).max(50).optional(),
+    board: z.string().trim().min(1).max(100).optional(),
+    session: z.string().trim().min(1).max(30).optional(),
+    description: z.string().trim().max(500).optional(),
+    rank: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(10000)
+      .optional(),
+    isPublished: booleanField,
     marks: z.coerce.number().min(0).optional(),
     totalMarks: z.coerce.number().min(1).optional(),
     percentage: z.coerce.number().min(0).max(100).optional(),
@@ -108,6 +134,10 @@ function scoreFields(data) {
   }
 
   return {}
+}
+
+export function selectPhotoUrl(uploadedAsset, submittedUrl) {
+  return uploadedAsset?.secure_url || submittedUrl
 }
 
 function topperResponse(item) {
@@ -194,7 +224,10 @@ router.get('/manage', ...adminOnly, async (req, res, next) => {
 })
 
 // POST: Create a topper record.
-router.post('/', ...adminOnly, async (req, res, next) => {
+router.post('/', ...adminOnly, uploadTopperPhoto, async (req, res, next) => {
+  let uploadedAsset = null
+  let persisted = false
+
   try {
     const parsed = createSchema.safeParse(req.body)
 
@@ -206,9 +239,16 @@ router.post('/', ...adminOnly, async (req, res, next) => {
       )
     }
 
+    if (req.file) {
+      uploadedAsset = await uploadTopperPhotoToCloudinary(req.file)
+    }
+
     const topper = await Topper.create({
       name: parsed.data.name,
-      photoUrl: parsed.data.photoUrl,
+      photoUrl: selectPhotoUrl(
+        uploadedAsset,
+        parsed.data.photoUrl,
+      ),
       className: parsed.data.className,
       board: parsed.data.board,
       session: parsed.data.session,
@@ -217,6 +257,7 @@ router.post('/', ...adminOnly, async (req, res, next) => {
       isPublished: parsed.data.isPublished ?? false,
       ...scoreFields(parsed.data),
     })
+    persisted = true
 
     res.status(201).json({
       success: true,
@@ -224,12 +265,18 @@ router.post('/', ...adminOnly, async (req, res, next) => {
       data: topperResponse(topper.toObject()),
     })
   } catch (error) {
+    if (!persisted && uploadedAsset?.public_id) {
+      await removeUploadedFile(uploadedAsset.public_id, 'image')
+    }
     next(error)
   }
 })
 
 // PUT/PATCH: Update a topper record.
 async function updateTopper(req, res, next) {
+  let uploadedAsset = null
+  let persisted = false
+
   try {
     if (!mongoose.isValidObjectId(req.params.id)) {
       return res.status(400).json({
@@ -257,9 +304,15 @@ async function updateTopper(req, res, next) {
       })
     }
 
+    if (req.file) {
+      uploadedAsset = await uploadTopperPhotoToCloudinary(req.file)
+      topper.photoUrl = selectPhotoUrl(uploadedAsset, topper.photoUrl)
+    } else if (parsed.data.photoUrl !== undefined) {
+      topper.photoUrl = parsed.data.photoUrl
+    }
+
     const fields = [
       'name',
-      'photoUrl',
       'className',
       'board',
       'session',
@@ -282,6 +335,7 @@ async function updateTopper(req, res, next) {
     }
 
     await topper.save()
+    persisted = true
 
     res.json({
       success: true,
@@ -289,12 +343,15 @@ async function updateTopper(req, res, next) {
       data: topperResponse(topper.toObject()),
     })
   } catch (error) {
+    if (!persisted && uploadedAsset?.public_id) {
+      await removeUploadedFile(uploadedAsset.public_id, 'image')
+    }
     next(error)
   }
 }
 
-router.put('/:id', ...adminOnly, updateTopper)
-router.patch('/:id', ...adminOnly, updateTopper)
+router.put('/:id', ...adminOnly, uploadTopperPhoto, updateTopper)
+router.patch('/:id', ...adminOnly, uploadTopperPhoto, updateTopper)
 
 // DELETE: Remove a topper record.
 router.delete('/:id', ...adminOnly, async (req, res, next) => {
