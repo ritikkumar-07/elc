@@ -155,10 +155,27 @@ function normalizeOrigin(value) {
   }
 }
 
+// const allowedOrigins = [
+//   ...String(
+//     process.env.FRONTEND_URL || 'http://localhost:5173',
+//   ).split(','),
+//   ...(process.env.LOCAL_NETWORK_IP
+//     ? [`http://${process.env.LOCAL_NETWORK_IP}:5173`]
+//     : []),
+// ]
+//   .map((value) => normalizeOrigin(value.trim()))
+//   .filter(Boolean)
+//   .filter((value, index, list) => list.indexOf(value) === index)
+
+
 const allowedOrigins = [
   ...String(
     process.env.FRONTEND_URL || 'http://localhost:5173',
   ).split(','),
+
+  // Capacitor Android app origin
+  'https://localhost',
+
   ...(process.env.LOCAL_NETWORK_IP
     ? [`http://${process.env.LOCAL_NETWORK_IP}:5173`]
     : []),
@@ -166,6 +183,7 @@ const allowedOrigins = [
   .map((value) => normalizeOrigin(value.trim()))
   .filter(Boolean)
   .filter((value, index, list) => list.indexOf(value) === index)
+
 
 app.use(
   cors({
