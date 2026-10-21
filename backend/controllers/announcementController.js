@@ -215,6 +215,11 @@ export async function listPublicAnnouncements(req, res, next) {
       .select('title content publishAt createdAt')
       .lean()
 
+    res.set(
+      'Cache-Control',
+      'public, max-age=60, stale-while-revalidate=300',
+    )
+
     return res.status(200).json({
       success: true,
       count: announcements.length,

@@ -143,6 +143,11 @@ router.get('/', async (req, res, next) => {
       .limit(limit)
       .lean()
 
+    res.set(
+      'Cache-Control',
+      'public, max-age=60, stale-while-revalidate=300',
+    )
+
     res.status(200).json({
       success: true,
       count: toppers.length,

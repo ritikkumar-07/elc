@@ -205,14 +205,14 @@ export default function Navbar() {
         <div className="border-t border-slate-200 bg-white px-4 py-3 lg:hidden">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.label}
-                href={link.href}
+                to={link.href}
                 onClick={() => setMenuOpen(false)}
                 className="rounded-lg px-3 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
 
             {!sessionLoading && dashboardPath && (
@@ -243,11 +243,11 @@ export default function Navbar() {
 
 function ReactNavLink({ href, label }) {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
       className="whitespace-nowrap text-sm font-medium text-slate-600 transition-colors hover:text-[#19366e] focus:outline-none focus:underline"
     >
       {label}
-    </a>
+    </Link>
   )
 }

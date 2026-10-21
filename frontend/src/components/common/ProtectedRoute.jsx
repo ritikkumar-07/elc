@@ -31,7 +31,9 @@ export default function ProtectedRoute({ roles, children }) {
     return (
       <Navigate
         to="/login"
-        state={{ from: location.pathname }}
+        state={{
+          from: `${location.pathname}${location.search}`,
+        }}
         replace
       />
     )

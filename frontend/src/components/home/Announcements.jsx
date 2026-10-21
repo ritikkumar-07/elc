@@ -19,7 +19,11 @@ export default function Announcements() {
 
         const result = await apiRequest(
           '/api/v1/announcements/public?limit=6',
-          { signal: controller.signal },
+          {
+            signal: controller.signal,
+            skipAuthEvent: true,
+            cache: 'default',
+          },
         )
 
         setAnnouncements(

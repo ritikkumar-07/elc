@@ -2,9 +2,7 @@
 import { useEffect, useState } from 'react'
 import SectionHeading from '../common/SectionHeading.jsx'
 import TopperCard from '../toppers/TopperCard.jsx'
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+import { apiRequest } from '../../lib/api.js'
 
 export default function TopStudents() {
   const [toppers, setToppers] = useState([])
@@ -19,16 +17,11 @@ export default function TopStudents() {
         setLoading(true)
         setError('')
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/v1/toppers`,
-          { signal: controller.signal },
-        )
-
-        if (!response.ok) {
-          throw new Error('Unable to load student achievements.')
-        }
-
-        const result = await response.json()
+        const result = await apiRequest('/api/v1/toppers', {
+          signal: controller.signal,
+          skipAuthEvent: true,
+          cache: 'default',
+        })
 
         if (!result.success || !Array.isArray(result.data)) {
           throw new Error('The server returned an invalid response.')

@@ -4,10 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
 import HeroBannerManager from '../components/dashboard/HeroBannerManager.jsx'
 import Hero from '../components/home/Hero.jsx'
-
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/$/, '')
+import { apiRequest } from '../lib/api.js'
 
 const roleConfig = {
   admin: {
@@ -250,26 +247,10 @@ export default function RoleDashboard({ expectedRole, section }) {
 
     async function verifySession() {
       try {
-        const response = await fetch(`${API_URL}/api/v1/auth/me`, {
-          method: 'GET',
-          credentials: 'include',
-          cache: 'no-store',
+        const result = await apiRequest('/api/v1/auth/me', {
           signal: controller.signal,
+          skipAuthEvent: true,
         })
-
-        const result = await response.json().catch(() => ({}))
-
-        if (response.status === 401) {
-          setUser(null)
-          navigate('/login', { replace: true })
-          return
-        }
-
-        if (!response.ok) {
-          throw new Error(
-            result.message || `Server returned ${response.status}.`,
-          )
-        }
 
         if (!result.success || !result.user) {
           throw new Error('The server returned an invalid session response.')
@@ -291,13 +272,17 @@ export default function RoleDashboard({ expectedRole, section }) {
 
         setUser(result.user)
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(
-            err instanceof TypeError
-              ? 'The ELC server could not be reached. Please check that the backend is running.'
-              : err.message || 'Unable to verify your session.',
-          )
+        if (err.name === 'AbortError') return
+
+        if (err.status === 401) {
+          setUser(null)
+          navigate('/login', { replace: true })
+          return
         }
+
+        setError(
+          err.message || 'Unable to verify your session.',
+        )
       } finally {
         if (!controller.signal.aborted) setLoading(false)
       }
@@ -310,9 +295,9 @@ export default function RoleDashboard({ expectedRole, section }) {
 
   async function handleLogout() {
     try {
-      await fetch(`${API_URL}/api/v1/auth/logout`, {
+      await apiRequest('/api/v1/auth/logout', {
         method: 'POST',
-        credentials: 'include',
+        skipAuthEvent: true,
       })
     } catch {
       // Navigate away even if the backend is temporarily unavailable.

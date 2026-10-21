@@ -9,7 +9,7 @@ export default function Courses() {
         <SectionHeading
           eyebrow="Our academics"
           title="Explore Our Courses"
-          description="Course details can be updated to match the programs actually offered by the center."
+          description="Browse the learning areas supported at Expert Learning Center."
         />
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -22,7 +22,12 @@ export default function Courses() {
                 {course.category}
               </span>
               <h3 className="mt-5 text-xl font-bold text-slate-900">
-                {course.title}
+                <Link
+                  to={`/courses/${course.id}`}
+                  className="transition-colors hover:text-blue-800"
+                >
+                  {course.title}
+                </Link>
               </h3>
               <p className="mt-3 flex-1 leading-7 text-slate-600">
                 {course.description}
@@ -32,10 +37,11 @@ export default function Courses() {
                 <p className="mt-1">Duration: {course.duration}</p>
               </div>
               <Link
-                to="/login"
+                to={`/courses/${course.id}`}
                 className="mt-5 font-bold text-blue-900 hover:text-blue-700"
+                aria-label={`Explore ${course.title}`}
               >
-                Enquire about courses →
+                Explore course →
               </Link>
             </article>
           ))}

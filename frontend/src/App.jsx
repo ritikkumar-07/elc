@@ -1,26 +1,73 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import {
+  BrowserRouter,
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom'
 
 import ProtectedRoute from './components/common/ProtectedRoute.jsx'
-import DashboardHome from './pages/DashboardHome.jsx'
+import { LoadingState } from './components/common/DashboardUI.jsx'
 import Home from './pages/Home.jsx'
-import Login from './pages/Login.jsx'
-import Register from './pages/Register.jsx'
-import RegistrationApprovals from './pages/RegistrationApprovals.jsx'
-import StudentManagement from './pages/StudentManagement.jsx'
-import TeacherManagement from './pages/TeacherManagement.jsx'
-import AcademicManagement from './pages/AcademicManagement.jsx'
-import MaterialManagement from './pages/MaterialManagement.jsx'
-import TestManagement from './pages/TestManagement.jsx'
-import TeacherResults from './pages/TeacherResults.jsx'
-import AdminResults from './pages/AdminResults.jsx'
-import StudentResults from './pages/StudentResults.jsx'
-import AttendancePage from './pages/AttendancePage.jsx'
-import AnnouncementManagement from './pages/AnnouncementManagement.jsx'
-import TopperManagement from './pages/TopperManagement.jsx'
-import HeroBannerManagement from './pages/HeroBannerManagement.jsx'
-import TeacherStudents from './pages/TeacherStudents.jsx'
-import StudentMaterials from './pages/StudentMaterials.jsx'
-import StudentTests from './pages/StudentTests.jsx'
+
+const CourseDetails = lazy(() =>
+  import('./pages/CourseDetails.jsx'),
+)
+const DashboardHome = lazy(() =>
+  import('./pages/DashboardHome.jsx'),
+)
+const Login = lazy(() => import('./pages/Login.jsx'))
+const Register = lazy(() => import('./pages/Register.jsx'))
+const RegistrationApprovals = lazy(() =>
+  import('./pages/RegistrationApprovals.jsx'),
+)
+const StudentManagement = lazy(() =>
+  import('./pages/StudentManagement.jsx'),
+)
+const TeacherManagement = lazy(() =>
+  import('./pages/TeacherManagement.jsx'),
+)
+const AcademicManagement = lazy(() =>
+  import('./pages/AcademicManagement.jsx'),
+)
+const MaterialManagement = lazy(() =>
+  import('./pages/MaterialManagement.jsx'),
+)
+const TestManagement = lazy(() =>
+  import('./pages/TestManagement.jsx'),
+)
+const TeacherResults = lazy(() =>
+  import('./pages/TeacherResults.jsx'),
+)
+const AdminResults = lazy(() =>
+  import('./pages/AdminResults.jsx'),
+)
+const StudentResults = lazy(() =>
+  import('./pages/StudentResults.jsx'),
+)
+const AttendancePage = lazy(() =>
+  import('./pages/AttendancePage.jsx'),
+)
+const AnnouncementManagement = lazy(() =>
+  import('./pages/AnnouncementManagement.jsx'),
+)
+const TopperManagement = lazy(() =>
+  import('./pages/TopperManagement.jsx'),
+)
+const HeroBannerManagement = lazy(() =>
+  import('./pages/HeroBannerManagement.jsx'),
+)
+const TeacherStudents = lazy(() =>
+  import('./pages/TeacherStudents.jsx'),
+)
+const StudentMaterials = lazy(() =>
+  import('./pages/StudentMaterials.jsx'),
+)
+const StudentTests = lazy(() =>
+  import('./pages/StudentTests.jsx'),
+)
 
 function NotFound() {
   return (
@@ -37,14 +84,45 @@ function NotFound() {
         The page you are looking for does not exist.
       </p>
 
-      <a
-        href="/"
+      <Link
+        to="/"
         className="mt-6 rounded-xl bg-blue-900 px-5 py-3 font-bold text-white"
       >
         Return Home
-      </a>
+      </Link>
     </main>
   )
+}
+
+function ScrollManager() {
+  const { pathname, hash } = useLocation()
+
+  useEffect(() => {
+    if (hash) {
+      const id = decodeURIComponent(hash.slice(1))
+      const target = document.getElementById(id)
+
+      if (target) {
+        const frame = window.requestAnimationFrame(() => {
+          const reduceMotion = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+          ).matches
+
+          target.scrollIntoView({
+            behavior: reduceMotion ? 'auto' : 'smooth',
+            block: 'start',
+          })
+        })
+
+        return () => window.cancelAnimationFrame(frame)
+      }
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    return undefined
+  }, [pathname, hash])
+
+  return null
 }
 
 function Protected({ roles, children }) {
@@ -54,8 +132,20 @@ function Protected({ roles, children }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <ScrollManager />
+      <Suspense
+        fallback={<LoadingState label="Loading..." fullPage />}
+      >
+        <Routes>
         <Route path="/" element={<Home />} />
+        <Route
+          path="/courses"
+          element={<Navigate to="/#courses" replace />}
+        />
+        <Route
+          path="/courses/:courseId"
+          element={<CourseDetails />}
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -260,7 +350,8 @@ export default function App() {
         />
 
         <Route path="*" element={<NotFound />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

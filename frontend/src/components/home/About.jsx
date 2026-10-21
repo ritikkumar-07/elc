@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 import SectionHeading from '../common/SectionHeading.jsx'
 
 export default function About() {
@@ -31,12 +33,12 @@ export default function About() {
             </p>
           </div>
 
-          <a
-            href="/#courses"
+          <Link
+            to="/#courses"
             className="mt-7 inline-block rounded-xl bg-blue-900 px-6 py-3 font-bold text-white hover:bg-blue-800"
           >
             Explore Learning
-          </a>
+          </Link>
         </div>
       </div>
     </section>

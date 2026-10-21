@@ -3,16 +3,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/+$/, '')
+import { apiRequest } from '../lib/api.js'
 
 export default function RegistrationApprovals() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { user: admin, logout } = useAuth()
 
-  const [admin, setAdmin] = useState(null)
   const [registrations, setRegistrations] = useState([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState('')
@@ -28,66 +24,16 @@ export default function RegistrationApprovals() {
   }
 
   useEffect(() => {
+    if (!admin) return undefined
+
     const controller = new AbortController()
 
     async function loadRegistrations() {
       try {
-        const sessionResponse = await fetch(
-          `${API_URL}/api/v1/auth/me`,
-          {
-            credentials: 'include',
-            cache: 'no-store',
-            signal: controller.signal,
-          }
+        const result = await apiRequest(
+          '/api/v1/admin/registrations/pending',
+          { signal: controller.signal },
         )
-
-        const session = await sessionResponse.json().catch(() => ({}))
-
-        if (sessionResponse.status === 401) {
-          navigate('/login', { replace: true })
-          return
-        }
-
-        if (
-          !sessionResponse.ok ||
-          !session.success ||
-          !session.user
-        ) {
-          throw new Error(
-            session.message || 'Unable to verify your session.'
-          )
-        }
-
-        if (session.user.role !== 'admin') {
-          navigate(
-            session.user.role === 'teacher'
-              ? '/teacher'
-              : session.user.role === 'student'
-                ? '/student'
-                : '/login',
-            { replace: true }
-          )
-          return
-        }
-
-        setAdmin(session.user)
-
-        const response = await fetch(
-          `${API_URL}/api/v1/admin/registrations/pending`,
-          {
-            credentials: 'include',
-            cache: 'no-store',
-            signal: controller.signal,
-          }
-        )
-
-        const result = await response.json().catch(() => ({}))
-
-        if (!response.ok || !result.success) {
-          throw new Error(
-            result.message || 'Unable to load pending registrations.'
-          )
-        }
 
         setRegistrations(
           Array.isArray(result.data) ? result.data : []
@@ -95,9 +41,7 @@ export default function RegistrationApprovals() {
       } catch (err) {
         if (err.name !== 'AbortError') {
           setError(
-            err instanceof TypeError
-              ? 'Cannot connect to the ELC server. Check the backend and network connection.'
-              : err.message || 'Unable to load registrations.'
+            err.message || 'Unable to load registrations.'
           )
         }
       } finally {
@@ -110,7 +54,7 @@ export default function RegistrationApprovals() {
     loadRegistrations()
 
     return () => controller.abort()
-  }, [navigate, reloadKey])
+  }, [admin, reloadKey])
 
   async function handleLogout() {
     await logout()
@@ -134,24 +78,10 @@ export default function RegistrationApprovals() {
     setNotice('')
 
     try {
-      const response = await fetch(
-        `${API_URL}/api/v1/admin/registrations/${id}/${action}`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+      const result = await apiRequest(
+        `/api/v1/admin/registrations/${id}/${action}`,
+        { method: 'PATCH' },
       )
-
-      const result = await response.json().catch(() => ({}))
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || `Unable to ${actionLabel} account.`
-        )
-      }
 
       setRegistrations((current) =>
         current.filter((item) => (item._id || item.id) !== id)
@@ -163,9 +93,7 @@ export default function RegistrationApprovals() {
       )
     } catch (err) {
       setError(
-        err instanceof TypeError
-          ? 'Cannot connect to the ELC server. Please try again.'
-          : err.message || 'The action could not be completed.'
+        err.message || 'The action could not be completed.'
       )
     } finally {
       setBusyId('')

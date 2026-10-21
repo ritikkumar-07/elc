@@ -3,6 +3,11 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import User from '../models/User.js'
+import {
+  AUTH_COOKIE_NAME,
+  authCookieOptions,
+  clearAuthCookie,
+} from '../utils/authCookie.js'
 
 const signupSchema = z.object({
   name: z.string().trim().min(2).max(100),
@@ -15,16 +20,6 @@ const loginSchema = z.object({
   email: z.string().trim().email().max(254),
   password: z.string().min(1).max(72),
 })
-
-const isProduction = process.env.NODE_ENV === 'production'
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? 'none' : 'lax',
-  path: '/',
-  maxAge: 24 * 60 * 60 * 1000,
-}
 
 function createToken(user) {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -127,6 +122,7 @@ export async function login(req, res, next) {
     if (!user) {
       return res.status(401).json({
         success: false,
+        code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password.',
       })
     }
@@ -139,6 +135,7 @@ export async function login(req, res, next) {
     if (!passwordMatches) {
       return res.status(401).json({
         success: false,
+        code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password.',
       })
     }
@@ -171,7 +168,7 @@ export async function login(req, res, next) {
 
     const token = createToken(user)
 
-    res.cookie('elc_token', token, cookieOptions)
+    res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions())
 
     return res.status(200).json({
       success: true,
@@ -185,12 +182,7 @@ export async function login(req, res, next) {
 
 // POST /api/v1/auth/logout
 export function logout(req, res) {
-  res.clearCookie('elc_token', {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
-  })
+  clearAuthCookie(res)
 
   return res.status(200).json({
     success: true,

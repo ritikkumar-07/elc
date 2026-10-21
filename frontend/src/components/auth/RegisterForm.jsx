@@ -2,9 +2,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
-).replace(/\/$/, '')
+import { apiRequest } from '../../lib/api.js'
 
 export default function RegisterForm() {
   const [name, setName] = useState('')
@@ -19,6 +17,9 @@ export default function RegisterForm() {
 
   async function handleSubmit(event) {
     event.preventDefault()
+
+    if (loading) return
+
     setError('')
     setSuccessMessage('')
 
@@ -40,27 +41,16 @@ export default function RegisterForm() {
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_URL}/api/v1/auth/signup`, {
+      const result = await apiRequest('/api/v1/auth/signup', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+        skipAuthEvent: true,
+        body: {
           name: name.trim(),
           email: email.trim().toLowerCase(),
           password,
           role,
-        }),
+        },
       })
-
-      const result = await response.json().catch(() => ({}))
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || 'Registration failed. Please try again.'
-        )
-      }
 
       setSuccessMessage(
         result.message ||
@@ -73,9 +63,8 @@ export default function RegisterForm() {
       setRole('student')
     } catch (err) {
       setError(
-        err instanceof TypeError
-          ? 'Cannot connect to the ELC server. Please check your connection and try again.'
-          : err.message || 'Something went wrong. Please try again.'
+        err.message ||
+          'Something went wrong. Please try again.'
       )
     } finally {
       setLoading(false)

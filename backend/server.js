@@ -147,30 +147,69 @@ const PORT = Number(process.env.PORT) || 5000
 
 app.use(helmet())
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
-]
-
-if (process.env.LOCAL_NETWORK_IP) {
-  allowedOrigins.push(
-    `http://${process.env.LOCAL_NETWORK_IP}:5173`,
-  )
+function normalizeOrigin(value) {
+  try {
+    return new URL(value).origin
+  } catch {
+    return ''
+  }
 }
+
+const allowedOrigins = [
+  ...String(
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+  ).split(','),
+  ...(process.env.LOCAL_NETWORK_IP
+    ? [`http://${process.env.LOCAL_NETWORK_IP}:5173`]
+    : []),
+]
+  .map((value) => normalizeOrigin(value.trim()))
+  .filter(Boolean)
+  .filter((value, index, list) => list.indexOf(value) === index)
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) {
         return callback(null, true)
       }
 
-      return callback(new Error('Origin not allowed by CORS'))
+      return callback(
+        null,
+        allowedOrigins.includes(normalizeOrigin(origin)),
+      )
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 )
+
+// Cookie-authenticated state changes must originate from a trusted site.
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next()
+  }
+
+  const origin = req.get('origin')
+  const referer = req.get('referer')
+  const requestOrigin = normalizeOrigin(origin || referer || '')
+
+  if (!origin && !referer) {
+    // Non-browser API clients do not send browser origin headers.
+    return next()
+  }
+
+  if (allowedOrigins.includes(requestOrigin)) {
+    return next()
+  }
+
+  return res.status(403).json({
+    success: false,
+    code: 'ORIGIN_NOT_ALLOWED',
+    message: 'Request origin is not allowed.',
+  })
+})
 
 app.use(express.json({ limit: '10kb' }))
 app.use(cookieParser())

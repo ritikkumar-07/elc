@@ -1,17 +1,20 @@
 
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
-
-const isProduction = process.env.NODE_ENV === 'production'
+import {
+  AUTH_COOKIE_NAME,
+  clearAuthCookie,
+} from '../utils/authCookie.js'
 
 // Verify login cookie and load the active user
 export async function requireAuth(req, res, next) {
   try {
-    const token = req.cookies?.elc_token
+    const token = req.cookies?.[AUTH_COOKIE_NAME]
 
     if (!token) {
       return res.status(401).json({
         success: false,
+        code: 'AUTH_REQUIRED',
         message: 'Please log in to continue.',
       })
     }
@@ -30,8 +33,11 @@ export async function requireAuth(req, res, next) {
     const user = await User.findById(decoded.sub)
 
     if (!user || user.status !== 'active') {
+      clearAuthCookie(res)
+
       return res.status(401).json({
         success: false,
+        code: 'ACCOUNT_INACTIVE',
         message: 'Your account is unavailable. Please log in again.',
       })
     }
@@ -39,11 +45,16 @@ export async function requireAuth(req, res, next) {
     req.user = user
     next()
   } catch (error) {
-    if (error.name === 'JsonWebTokenError' ||
-        error.name === 'TokenExpiredError' ||
-        error.name === 'NotBeforeError') {
+    if (
+      error.name === 'JsonWebTokenError' ||
+      error.name === 'TokenExpiredError' ||
+      error.name === 'NotBeforeError'
+    ) {
+      clearAuthCookie(res)
+
       return res.status(401).json({
         success: false,
+        code: 'SESSION_INVALID',
         message: 'Your session is invalid or expired. Please log in again.',
       })
     }
@@ -58,6 +69,7 @@ export function allowRoles(...roles) {
     if (!req.user) {
       return res.status(401).json({
         success: false,
+        code: 'AUTH_REQUIRED',
         message: 'Please log in to continue.',
       })
     }
@@ -65,6 +77,7 @@ export function allowRoles(...roles) {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
+        code: 'FORBIDDEN',
         message: 'You do not have permission to perform this action.',
       })
     }

@@ -376,22 +376,26 @@ export function DonutChart({
     return <ChartEmpty message={emptyMessage} />
   }
 
-  let offset = 0
-  const prepared = rows.map((segment, index) => {
-    const value = Number(segment.value)
-    const portion = (value / total) * 100
-    const item = {
-      ...segment,
-      value,
-      portion,
-      offset,
-      color:
-        segment.color ||
-        SERIES_COLORS[index % SERIES_COLORS.length],
-    }
-    offset += portion
-    return item
-  })
+  const { prepared } = rows.reduce(
+    (accumulator, segment, index) => {
+      const value = Number(segment.value)
+      const portion = (value / total) * 100
+
+      accumulator.prepared.push({
+        ...segment,
+        value,
+        portion,
+        offset: accumulator.offset,
+        color:
+          segment.color ||
+          SERIES_COLORS[index % SERIES_COLORS.length],
+      })
+      accumulator.offset += portion
+
+      return accumulator
+    },
+    { prepared: [], offset: 0 },
+  )
 
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:justify-center">

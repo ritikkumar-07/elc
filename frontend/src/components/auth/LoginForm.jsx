@@ -1,6 +1,6 @@
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../context/AuthContext.jsx'
 
@@ -10,8 +10,30 @@ const roles = [
   { value: 'admin', label: 'Director / Admin' },
 ]
 
+function safeReturnPath(value) {
+  if (
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    value.startsWith('//')
+  ) {
+    return ''
+  }
+
+  try {
+    const url = new URL(value, window.location.origin)
+
+    if (url.origin !== window.location.origin) return ''
+    if (['/login', '/register'].includes(url.pathname)) return ''
+
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return ''
+  }
+}
+
 export default function LoginForm() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, logout } = useAuth()
 
   const [role, setRole] = useState('student')
@@ -23,6 +45,9 @@ export default function LoginForm() {
 
   async function handleSubmit(event) {
     event.preventDefault()
+
+    if (loading) return
+
     setError('')
 
     if (!email.trim() || !password) {
@@ -57,11 +82,16 @@ export default function LoginForm() {
         student: '/student',
       }
 
-      navigate(destinations[actualRole] || '/', { replace: true })
+      const returnPath = safeReturnPath(location.state?.from)
+
+      navigate(
+        returnPath || destinations[actualRole] || '/',
+        { replace: true },
+      )
     } catch (err) {
       setError(
         err.status === 0
-          ? 'Cannot connect to the ELC server. Make sure the backend is running on port 5000.'
+          ? 'Cannot connect to the ELC server. Please check your connection and try again.'
           : err.message || 'Something went wrong. Please try again.'
       )
     } finally {

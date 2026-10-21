@@ -65,6 +65,11 @@ router.get('/', async (req, res, next) => {
       .sort({ order: 1, createdAt: 1 })
       .lean()
 
+    res.set(
+      'Cache-Control',
+      'public, max-age=60, stale-while-revalidate=300',
+    )
+
     res.json({
       success: true,
       count: banners.length,

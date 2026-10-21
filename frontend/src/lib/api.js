@@ -1,18 +1,51 @@
+const configuredApiBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL || ''
+).trim()
+
+const developmentApiBaseUrl = import.meta.env.DEV
+  ? 'http://localhost:5000'
+  : ''
+
 export const API_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+  configuredApiBaseUrl || developmentApiBaseUrl
 ).replace(/\/+$/, '')
 
+export const UNAUTHORIZED_EVENT = 'elc:unauthorized'
+
 export class ApiError extends Error {
-  constructor(message, status = 0, errors = []) {
+  constructor(message, status = 0, errors = [], code = '') {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.errors = errors
+    this.code = code
+  }
+}
+
+function apiUrl(path) {
+  if (!API_URL) {
+    throw new ApiError(
+      'The ELC API URL is not configured. Set VITE_API_BASE_URL to the backend URL and rebuild the frontend.',
+    )
+  }
+
+  return `${API_URL}${path}`
+}
+
+function notifyUnauthorized() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
   }
 }
 
 export async function apiRequest(path, options = {}) {
-  const { body, headers = {}, ...rest } = options
+  const {
+    body,
+    headers = {},
+    skipAuthEvent = false,
+    ...rest
+  } = options
+
   const config = {
     credentials: 'include',
     cache: 'no-store',
@@ -32,9 +65,10 @@ export async function apiRequest(path, options = {}) {
   let response
 
   try {
-    response = await fetch(`${API_URL}${path}`, config)
+    response = await fetch(apiUrl(path), config)
   } catch (error) {
     if (error.name === 'AbortError') throw error
+    if (error instanceof ApiError) throw error
 
     throw new ApiError(
       'Cannot connect to the ELC server. Check that the backend is running.',
@@ -52,15 +86,18 @@ export async function apiRequest(path, options = {}) {
     }
   }
 
-  if (response.status === 401) {
-    window.dispatchEvent(new Event('elc:unauthorized'))
+  const failed = !response.ok || result.success === false
+
+  if (failed && response.status === 401 && !skipAuthEvent) {
+    notifyUnauthorized()
   }
 
-  if (!response.ok || result.success === false) {
+  if (failed) {
     throw new ApiError(
       result.message || `Request failed with status ${response.status}.`,
       response.status,
       result.errors || [],
+      result.code || '',
     )
   }
 
@@ -84,18 +121,20 @@ export async function downloadFile(path, fileName) {
   let response
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(apiUrl(path), {
       credentials: 'include',
       cache: 'no-store',
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+
     throw new ApiError(
       'Cannot connect to the ELC server. Check that the backend is running.',
     )
   }
 
   if (response.status === 401) {
-    window.dispatchEvent(new Event('elc:unauthorized'))
+    notifyUnauthorized()
   }
 
   if (!response.ok) {
@@ -103,6 +142,8 @@ export async function downloadFile(path, fileName) {
     throw new ApiError(
       result.message || 'The file could not be downloaded.',
       response.status,
+      [],
+      result.code || '',
     )
   }
 

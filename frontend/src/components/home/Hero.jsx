@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import { apiRequest } from '../../lib/api.js'
+
 const defaultSlides = [
   {
     eyebrow: 'PREPARE · PERFORM · PROGRESS',
@@ -50,8 +52,6 @@ const features = [
   },
 ]
 
-const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/$/, '')
-
 export default function Hero({ variant = 'public', canManageBanners = false }) {
   const isPublic = variant === 'public'
   const [slides, setSlides] = useState(defaultSlides)
@@ -60,30 +60,40 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch(`${API_URL}/api/v1/hero-banners`, { signal: controller.signal, cache: 'no-store' })
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Managed hero banners are unavailable')
-        const result = await response.json()
-        if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
-          return result.data.map((banner) => ({
-            eyebrow: banner.eyebrow,
-            title: banner.title,
-            description: banner.description,
-            image: banner.imageUrl,
-            alt: banner.altText,
-          }))
-        }
-        return null
-      })
-      .then((managedSlides) => {
-        if (!controller.signal.aborted && managedSlides?.length) {
-          setSlides(managedSlides)
+
+    async function loadBanners() {
+      try {
+        const result = await apiRequest('/api/v1/hero-banners', {
+          signal: controller.signal,
+          skipAuthEvent: true,
+          cache: 'default',
+        })
+
+        if (
+          result?.success &&
+          Array.isArray(result.data) &&
+          result.data.length > 0 &&
+          !controller.signal.aborted
+        ) {
+          setSlides(
+            result.data.map((banner) => ({
+              eyebrow: banner.eyebrow,
+              title: banner.title,
+              description: banner.description,
+              image: banner.imageUrl,
+              alt: banner.altText,
+            })),
+          )
           setActiveIndex(0)
         }
-      })
-      .catch((error) => {
-        if (error.name !== 'AbortError') { /* Keep the original slides available when the API is offline. */ }
-      })
+      } catch (error) {
+        // Keep the built-in slides available when the API is offline.
+        if (error.name === 'AbortError') return
+      }
+    }
+
+    loadBanners()
+
     return () => controller.abort()
   }, [])
 

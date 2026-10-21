@@ -1,0 +1,6 @@
+# Local environment files and session artifacts
+.env
+.env.*
+!.env.example
+*.cookies.txt
+cookies.txt
