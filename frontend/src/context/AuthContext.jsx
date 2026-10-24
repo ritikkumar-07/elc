@@ -10,6 +10,7 @@ import {
 
 import {
   apiRequest,
+  setCsrfToken,
   UNAUTHORIZED_EVENT,
 } from '../lib/api.js'
 
@@ -58,6 +59,7 @@ export function AuthProvider({ children }) {
             return result.user || null
           }
 
+          setCsrfToken(result.csrfToken)
           applyUser(result.user || null)
           setError('')
           return result.user || null
@@ -144,6 +146,7 @@ export function AuthProvider({ children }) {
       }
 
       sessionVersionRef.current += 1
+      setCsrfToken(result.csrfToken)
       applyUser(result.user)
       setError('')
       setLoading(false)
@@ -160,15 +163,27 @@ export function AuthProvider({ children }) {
         method: 'POST',
         skipAuthEvent: true,
       })
-    } catch {
-      // Clear local state even if the server is temporarily unreachable.
-    } finally {
+    } catch (err) {
       if (mountedRef.current) {
-        applyUser(null)
-        setError('')
+        setError(
+          err.message ||
+            'Logout could not be confirmed. Please try again.',
+        )
         setLoading(false)
       }
+
+      return false
     }
+
+    setCsrfToken('')
+
+    if (mountedRef.current) {
+      applyUser(null)
+      setError('')
+      setLoading(false)
+    }
+
+    return true
   }, [applyUser])
 
   const value = useMemo(

@@ -1,38 +1,153 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  Activity,
+  ArrowRight,
+  Award,
+  BarChart3,
+  BookOpen,
+  CalendarCheck,
+  CalendarDays,
+  ClipboardCheck,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  Megaphone,
+  Sparkles,
+  UserCheck,
+  Users,
+} from 'lucide-react'
 
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
 import {
-  cardClass,
+  Badge,
+  CompactStatCard,
   ErrorState,
-  LoadingState,
   PageHeader,
-  StatCard,
+  Panel,
+  Skeleton,
 } from '../components/common/DashboardUI.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { apiRequest } from '../lib/api.js'
 
-const quickLinks = {
+const quickActions = {
   admin: [
-    ['Review registrations', '/admin/registrations'],
-    ['Manage students', '/admin/students'],
-    ['Publish study material', '/admin/notes'],
-    ['Prepare a test', '/admin/tests'],
-    ['Results analytics', '/admin/results'],
+    {
+      label: 'Review registrations',
+      description: 'Approve or reject pending accounts',
+      to: '/admin/registrations',
+      icon: ClipboardCheck,
+    },
+    {
+      label: 'Manage students',
+      description: 'Profiles, classes, and account status',
+      to: '/admin/students',
+      icon: Users,
+    },
+    {
+      label: 'Study materials',
+      description: 'Upload and publish class resources',
+      to: '/admin/notes',
+      icon: FolderOpen,
+    },
+    {
+      label: 'Tests & papers',
+      description: 'Create assessments and enter marks',
+      to: '/admin/tests',
+      icon: FileText,
+    },
+    {
+      label: 'Results analytics',
+      description: 'Review performance and trends',
+      to: '/admin/results',
+      icon: BarChart3,
+    },
   ],
   teacher: [
-    ['My students', '/teacher/students'],
-    ['Upload study material', '/teacher/notes'],
-    ['Manage tests', '/teacher/tests'],
-    ['Results analytics', '/teacher/results'],
-    ['Mark attendance', '/teacher/attendance'],
+    {
+      label: 'My students',
+      description: 'View active students in your classes',
+      to: '/teacher/students',
+      icon: Users,
+    },
+    {
+      label: 'Study materials',
+      description: 'Upload resources for your classes',
+      to: '/teacher/notes',
+      icon: FolderOpen,
+    },
+    {
+      label: 'Tests & results',
+      description: 'Prepare tests and enter marks',
+      to: '/teacher/tests',
+      icon: FileText,
+    },
+    {
+      label: 'Results analytics',
+      description: 'Review class performance',
+      to: '/teacher/results',
+      icon: BarChart3,
+    },
+    {
+      label: 'Mark attendance',
+      description: 'Open the class attendance workspace',
+      to: '/teacher/attendance',
+      icon: CalendarCheck,
+    },
   ],
   student: [
-    ['Class notes', '/student/notes'],
-    ['Upcoming tests', '/student/tests'],
-    ['My results', '/student/results'],
-    ['My attendance', '/student/attendance'],
+    {
+      label: 'Class notes',
+      description: 'Open published study materials',
+      to: '/student/notes',
+      icon: BookOpen,
+    },
+    {
+      label: 'Upcoming tests',
+      description: 'Review your assessment schedule',
+      to: '/student/tests',
+      icon: FileText,
+    },
+    {
+      label: 'My results',
+      description: 'See published marks and progress',
+      to: '/student/results',
+      icon: BarChart3,
+    },
+    {
+      label: 'My attendance',
+      description: 'Review your attendance history',
+      to: '/student/attendance',
+      icon: CalendarCheck,
+    },
   ],
+}
+
+const activityLabels = {
+  'account.password.changed': 'Password changed',
+  'announcement.created': 'Announcement created',
+  'announcement.updated': 'Announcement updated',
+  'announcement.deleted': 'Announcement removed',
+  'attendance.batch_saved': 'Attendance updated',
+  'attendance.class_marked': 'Class attendance marked',
+  'attendance.saved': 'Attendance saved',
+  'marks.saved': 'Marks saved',
+  'material.created': 'Study material added',
+  'material.updated': 'Study material updated',
+  'material.deleted': 'Study material removed',
+  'registration.approved': 'Registration approved',
+  'registration.rejected': 'Registration rejected',
+  'results.published': 'Results published',
+  'results.unpublished': 'Results unpublished',
+  'test.created': 'Test created',
+  'test.updated': 'Test updated',
+  'test.deleted': 'Test removed',
+  'topper.created': 'Topper added',
+  'topper.updated': 'Topper updated',
+  'topper.deleted': 'Topper removed',
+  'user.created': 'Account created',
+  'user.status.changed': 'Account status changed',
+  'user.updated': 'Account updated',
 }
 
 function formatDate(value) {
@@ -45,23 +160,102 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-function ListCard({ title, description, children }) {
-  return (
-    <section className={cardClass}>
-      <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="text-base font-bold text-slate-900">{title}</h2>
-        {description && (
-          <p className="mt-1 text-xs text-slate-500">{description}</p>
-        )}
-      </div>
-      {children}
-    </section>
-  )
+function formatDateTime(value) {
+  if (!value) return ''
+
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(value))
+}
+
+function activityLabel(action) {
+  if (activityLabels[action]) return activityLabels[action]
+
+  return String(action || 'Administrative activity')
+    .replaceAll('.', ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function EmptyRow({ children }) {
   return (
-    <p className="px-5 py-6 text-sm text-slate-500">{children}</p>
+    <p className="px-4 py-6 text-sm text-slate-500 sm:px-5">
+      {children}
+    </p>
+  )
+}
+
+function QuickActions({ role }) {
+  const items = quickActions[role] || []
+
+  return (
+    <Panel
+      title="Quick access"
+      description="Frequently used areas of your workspace."
+      icon={Sparkles}
+      bodyClassName="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-5"
+    >
+      {items.map((item) => {
+        const Icon = item.icon
+
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 transition hover:border-blue-200 hover:bg-blue-50/40 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-100"
+          >
+            <span
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600 transition group-hover:bg-white group-hover:text-[#19366e]"
+              aria-hidden="true"
+            >
+              <Icon className="h-4 w-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-xs font-bold text-slate-900">
+                {item.label}
+              </span>
+              <span className="mt-0.5 line-clamp-2 block text-[11px] leading-4 text-slate-500">
+                {item.description}
+              </span>
+            </span>
+          </Link>
+        )
+      })}
+    </Panel>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-5" aria-hidden="true">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div
+            key={index}
+            className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+            </div>
+            <Skeleton className="mt-3 h-6 w-14" />
+            <Skeleton className="mt-2 h-3 w-32" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton key={index} className="h-20 rounded-xl" />
+        ))}
+      </div>
+      <div className="grid gap-5 xl:grid-cols-2">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-56 rounded-2xl" />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -114,28 +308,125 @@ export default function DashboardHome() {
   }).format(new Date())
 
   const stats = data?.stats || {}
+  const role = user?.role
 
   const metricCards =
-    user?.role === 'admin'
+    role === 'admin'
       ? [
-          ['Active students', stats.activeStudents, '♙', 'Approved student accounts'],
-          ['Active teachers', stats.activeTeachers, '♧', 'Approved teacher accounts'],
-          ['Pending approvals', stats.pendingRegistrations, '✓', 'Registrations awaiting review'],
-          ['Active classes', stats.classes, '▤', 'Current class groups'],
+          {
+            label: 'Active students',
+            value: stats.activeStudents,
+            icon: Users,
+            tone: 'teal',
+            hint: 'Approved student accounts',
+            to: '/admin/students',
+          },
+          {
+            label: 'Active teachers',
+            value: stats.activeTeachers,
+            icon: GraduationCap,
+            tone: 'indigo',
+            hint: 'Approved teacher accounts',
+            to: '/admin/teachers',
+          },
+          {
+            label: 'Pending approvals',
+            value: stats.pendingRegistrations,
+            icon: UserCheck,
+            tone: 'amber',
+            hint: 'Registrations awaiting review',
+            to: '/admin/registrations',
+            alert: Number(stats.pendingRegistrations || 0) > 0,
+          },
+          {
+            label: 'Active classes',
+            value: stats.classes,
+            icon: BookOpen,
+            tone: 'navy',
+            hint: 'Current active class groups',
+            to: '/admin/classes',
+          },
         ]
-      : user?.role === 'teacher'
+      : role === 'teacher'
         ? [
-            ['Assigned classes', stats.assignedClasses, '▤', 'Classes linked to your account'],
-            ['Active students', stats.activeStudents, '♙', 'Students in your classes'],
-            ['Study materials', stats.materials, '▧', 'Uploaded resources'],
-            ['Published results', stats.publishedResults, '↗', 'Result records visible to students'],
+            {
+              label: 'Assigned classes',
+              value: stats.assignedClasses,
+              icon: BookOpen,
+              tone: 'navy',
+              hint: 'Classes linked to your account',
+              to: '/teacher/students',
+            },
+            {
+              label: 'Active students',
+              value: stats.activeStudents,
+              icon: Users,
+              tone: 'teal',
+              hint: 'Students in your classes',
+              to: '/teacher/students',
+            },
+            {
+              label: 'Study materials',
+              value: stats.materials,
+              icon: FolderOpen,
+              tone: 'indigo',
+              hint: 'Uploaded resources',
+              to: '/teacher/notes',
+            },
+            {
+              label: 'Published results',
+              value: stats.publishedResults,
+              icon: BarChart3,
+              tone: 'amber',
+              hint: 'Result records visible to students',
+              to: '/teacher/results',
+            },
           ]
         : [
-            ['Study materials', stats.materials, '▧', 'Resources for your class'],
-            ['Tests', stats.tests, '✓', 'Published and completed tests'],
-            ['Average result', stats.averageResult != null ? `${stats.averageResult}%` : '—', '↗', stats.bestResult != null ? `Best ${stats.bestResult}% across published results` : 'Across published results'],
-            ['Attendance', data?.attendance?.percentage != null ? `${data.attendance.percentage}%` : '—', '◷', 'Present, late, and excused'],
+            {
+              label: 'Study materials',
+              value: stats.materials,
+              icon: BookOpen,
+              tone: 'indigo',
+              hint: 'Resources for your class',
+              to: '/student/notes',
+            },
+            {
+              label: 'Tests',
+              value: stats.tests,
+              icon: FileText,
+              tone: 'navy',
+              hint: 'Published and completed tests',
+              to: '/student/tests',
+            },
+            {
+              label: 'Average result',
+              value:
+                stats.averageResult != null
+                  ? `${stats.averageResult}%`
+                  : '—',
+              icon: Award,
+              tone: 'teal',
+              hint:
+                stats.bestResult != null
+                  ? `Best ${stats.bestResult}% across published results`
+                  : 'Across published results',
+              to: '/student/results',
+            },
+            {
+              label: 'Attendance',
+              value:
+                data?.attendance?.percentage != null
+                  ? `${data.attendance.percentage}%`
+                  : '—',
+              icon: CalendarCheck,
+              tone: 'amber',
+              hint: 'Present, late, and excused',
+              to: '/student/attendance',
+            },
           ]
+
+  const recentActivity = data?.recentActivity || []
 
   return (
     <DashboardLayout
@@ -144,24 +435,32 @@ export default function DashboardHome() {
       user={user}
       onLogout={logout}
     >
-      <div className="space-y-7">
+      <div className="space-y-5">
         <PageHeader
           eyebrow={roleLabel}
           title={`Welcome, ${firstName}.`}
           description="Your academic workspace is connected to live institute records."
           action={
-            <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Today
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">
-                {date}
-              </p>
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 shadow-sm">
+              <span
+                className="grid h-9 w-9 place-items-center rounded-lg bg-blue-50 text-[#19366e]"
+                aria-hidden="true"
+              >
+                <CalendarDays className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                  Today
+                </p>
+                <p className="mt-0.5 text-xs font-semibold text-slate-800 sm:text-sm">
+                  {date}
+                </p>
+              </div>
             </div>
           }
         />
 
-        {loading && <LoadingState label="Loading dashboard..." />}
+        {loading && <DashboardSkeleton />}
 
         {!loading && error && (
           <ErrorState
@@ -172,117 +471,44 @@ export default function DashboardHome() {
 
         {!loading && !error && data && (
           <>
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {metricCards.map(([label, value, icon, hint]) => (
-                <StatCard
-                  key={label}
-                  label={label}
-                  value={value ?? 0}
-                  icon={icon}
-                  hint={hint}
-                />
+            <section
+              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+              aria-label="Workspace summary"
+            >
+              {metricCards.map((card) => (
+                <CompactStatCard key={card.label} {...card} />
               ))}
             </section>
 
-            {user?.role === 'student' && (
-              <section className={cardClass}>
-                <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      My class
-                    </h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Your current academic placement.
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">
-                    {data.class
-                      ? [data.class.name, data.class.section]
-                          .filter(Boolean)
-                          .join(' - ')
-                      : 'No class assigned'}
-                  </span>
-                </div>
-                <div className="grid gap-4 p-5 sm:grid-cols-3">
-                  <div>
-                    <p className="text-xs text-slate-500">Attendance</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {data.attendance?.percentage != null
-                        ? `${data.attendance.percentage}%`
-                        : 'Not marked'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Days recorded</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {data.attendance?.totalDays ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500">Announcements</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {stats.announcements ?? 0}
-                    </p>
-                  </div>
-                </div>
-              </section>
-            )}
+            <QuickActions role={role} />
 
-            {user?.role === 'teacher' && data.classes?.length > 0 && (
-              <section className={cardClass}>
-                <div className="border-b border-slate-100 px-5 py-4">
-                  <h2 className="text-base font-bold text-slate-900">
-                    Assigned classes
-                  </h2>
-                </div>
-                <div className="flex flex-wrap gap-2 p-5">
-                  {data.classes.map((item) => (
-                    <span
-                      key={item._id || item.id}
-                      className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800"
-                    >
-                      {[item.name, item.section]
-                        .filter(Boolean)
-                        .join(' - ')}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <section className="grid items-start gap-6 xl:grid-cols-2">
-              <ListCard
-                title="Quick access"
-                description="Frequently used areas of your workspace."
-              >
-                <div className="divide-y divide-slate-100 px-2 py-2">
-                  {(quickLinks[user?.role] || []).map(
-                    ([label, path]) => (
-                      <Link
-                        key={path}
-                        to={path}
-                        className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-blue-900"
-                      >
-                        <span>{label}</span>
-                        <span aria-hidden="true" className="text-slate-400">
-                          ›
-                        </span>
-                      </Link>
-                    ),
-                  )}
-                </div>
-              </ListCard>
-
-              <ListCard
+            <div className="grid items-start gap-5 xl:grid-cols-2">
+              <Panel
                 title="Upcoming tests"
                 description="Published assessments for your portal."
+                icon={CalendarCheck}
+                action={
+                  <Link
+                    to={
+                      role === 'admin'
+                        ? '/admin/tests'
+                        : role === 'teacher'
+                          ? '/teacher/tests'
+                          : '/student/tests'
+                    }
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#19366e] hover:underline"
+                  >
+                    View all
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                }
               >
                 {data.upcomingTests?.length ? (
                   <div className="divide-y divide-slate-100">
                     {data.upcomingTests.map((test) => (
                       <div
                         key={test._id || test.id}
-                        className="flex items-start justify-between gap-3 px-5 py-4"
+                        className="flex items-start justify-between gap-3 px-4 py-3.5 sm:px-5"
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-slate-900">
@@ -305,19 +531,32 @@ export default function DashboardHome() {
                 ) : (
                   <EmptyRow>No upcoming tests are published.</EmptyRow>
                 )}
-              </ListCard>
+              </Panel>
 
-              {user?.role === 'admin' && (
-                <ListCard
+              {role === 'admin' ? (
+                <Panel
                   title="Pending registrations"
                   description="New accounts awaiting an approval decision."
+                  icon={UserCheck}
+                  action={
+                    <Link
+                      to="/admin/registrations"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#19366e] hover:underline"
+                    >
+                      Review
+                      <ArrowRight
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  }
                 >
                   {data.recentRegistrations?.length ? (
                     <div className="divide-y divide-slate-100">
                       {data.recentRegistrations.map((item) => (
                         <div
                           key={item._id}
-                          className="flex items-center justify-between gap-3 px-5 py-4"
+                          className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-slate-900">
@@ -327,26 +566,146 @@ export default function DashboardHome() {
                               {item.email}
                             </p>
                           </div>
-                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold capitalize text-amber-800">
-                            {item.role}
-                          </span>
+                          <Badge tone="amber">{item.role}</Badge>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <EmptyRow>No pending registrations.</EmptyRow>
                   )}
-                </ListCard>
+                </Panel>
+              ) : (
+                <Panel
+                  title={
+                    role === 'teacher'
+                      ? 'Assigned classes'
+                      : 'My class'
+                  }
+                  description={
+                    role === 'teacher'
+                      ? 'Classes linked to your teaching account.'
+                      : 'Your current academic placement.'
+                  }
+                  icon={BookOpen}
+                >
+                  {role === 'student' ? (
+                    <div className="space-y-4 p-4 sm:p-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-900">
+                          {data.class
+                            ? [data.class.name, data.class.section]
+                                .filter(Boolean)
+                                .join(' - ')
+                            : 'No class assigned'}
+                        </span>
+                        {data.class?.academicYear && (
+                          <span className="text-xs text-slate-500">
+                            {data.class.academicYear}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <p className="text-[11px] text-slate-500">
+                            Attendance
+                          </p>
+                          <p className="mt-0.5 text-base font-bold text-slate-900">
+                            {data.attendance?.percentage != null
+                              ? `${data.attendance.percentage}%`
+                              : 'Not marked'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-slate-500">
+                            Days recorded
+                          </p>
+                          <p className="mt-0.5 text-base font-bold text-slate-900">
+                            {data.attendance?.totalDays ?? 0}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-slate-500">
+                            Announcements
+                          </p>
+                          <p className="mt-0.5 text-base font-bold text-slate-900">
+                            {stats.announcements ?? 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : data.classes?.length ? (
+                    <div className="flex flex-wrap gap-2 p-4 sm:p-5">
+                      {data.classes.map((item) => (
+                        <span
+                          key={item._id || item.id}
+                          className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-900"
+                        >
+                          {[item.name, item.section]
+                            .filter(Boolean)
+                            .join(' - ')}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyRow>
+                      No classes are assigned to your account yet.
+                    </EmptyRow>
+                  )}
+                </Panel>
               )}
 
-              <ListCard
+              {role === 'admin' && (
+                <Panel
+                  title="Recent administrative activity"
+                  description="Latest recorded changes from the audit trail."
+                  icon={Activity}
+                >
+                  {recentActivity.length ? (
+                    <div className="divide-y divide-slate-100">
+                      {recentActivity.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="flex items-start justify-between gap-3 px-4 py-3.5 sm:px-5"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {activityLabel(entry.action)}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-slate-500">
+                              {entry.actor?.name ||
+                                entry.actorRole ||
+                                'System'}
+                              {entry.targetType
+                                ? ` · ${entry.targetType.replaceAll('.', ' ')}`
+                                : ''}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-xs text-slate-500">
+                            {formatDateTime(entry.createdAt)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyRow>
+                      No administrative activity has been recorded yet.
+                    </EmptyRow>
+                  )}
+                </Panel>
+              )}
+
+              <Panel
                 title="Recent announcements"
                 description="Latest updates published for your portal."
+                icon={Megaphone}
               >
                 {data.recentAnnouncements?.length ? (
                   <div className="divide-y divide-slate-100">
                     {data.recentAnnouncements.map((item) => (
-                      <div key={item._id} className="px-5 py-4">
+                      <div
+                        key={item._id}
+                        className="px-4 py-3.5 sm:px-5"
+                      >
                         <div className="flex items-start justify-between gap-3">
                           <p className="text-sm font-semibold text-slate-900">
                             {item.title}
@@ -366,19 +725,32 @@ export default function DashboardHome() {
                 ) : (
                   <EmptyRow>No announcements have been published.</EmptyRow>
                 )}
-              </ListCard>
+              </Panel>
 
-              {user?.role === 'student' && (
-                <ListCard
+              {role === 'student' && (
+                <Panel
                   title="Recent results"
                   description="Your latest published marks."
+                  icon={BarChart3}
+                  action={
+                    <Link
+                      to="/student/results"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#19366e] hover:underline"
+                    >
+                      View all
+                      <ArrowRight
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  }
                 >
                   {data.recentResults?.length ? (
                     <div className="divide-y divide-slate-100">
                       {data.recentResults.map((result) => (
                         <div
                           key={result.id}
-                          className="flex items-center justify-between gap-3 px-5 py-4"
+                          className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-slate-900">
@@ -391,11 +763,15 @@ export default function DashboardHome() {
                           <div className="shrink-0 text-right">
                             {result.assessmentStatus === 'entered' ? (
                               <p className="text-sm font-bold text-blue-900">
-                                {result.marksObtained}/{result.maxMarks} ({result.percentage}%)
+                                {result.marksObtained}/{result.maxMarks} (
+                                {result.percentage}%)
                               </p>
                             ) : (
                               <p className="text-xs font-semibold capitalize text-amber-700">
-                                {String(result.assessmentStatus || 'not entered').replaceAll('_', ' ')}
+                                {String(
+                                  result.assessmentStatus ||
+                                    'not entered',
+                                ).replaceAll('_', ' ')}
                               </p>
                             )}
                           </div>
@@ -405,9 +781,9 @@ export default function DashboardHome() {
                   ) : (
                     <EmptyRow>No published results yet.</EmptyRow>
                   )}
-                </ListCard>
+                </Panel>
               )}
-            </section>
+            </div>
           </>
         )}
       </div>

@@ -4,3 +4,10 @@
 !.env.example
 *.cookies.txt
 cookies.txt
+
+# Android signing and local SDK configuration
+*.jks
+*.keystore
+*.p12
+*.pfx
+local.properties

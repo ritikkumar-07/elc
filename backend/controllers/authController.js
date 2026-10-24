@@ -1,6 +1,5 @@
 
 import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 import User from '../models/User.js'
 import {
@@ -8,6 +7,14 @@ import {
   authCookieOptions,
   clearAuthCookie,
 } from '../utils/authCookie.js'
+import {
+  createSessionToken,
+  isJwtError,
+  sessionExpiry,
+  verifySessionToken,
+} from '../utils/sessionToken.js'
+import { revokeSession } from '../utils/sessionRevocation.js'
+import { recordAudit } from '../utils/audit.js'
 
 const signupSchema = z.object({
   name: z.string().trim().min(2).max(100),
@@ -21,17 +28,8 @@ const loginSchema = z.object({
   password: z.string().min(1).max(72),
 })
 
-function createToken(user) {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
-    throw new Error('JWT_SECRET must contain at least 32 characters.')
-  }
-
-  return jwt.sign(
-    { sub: user._id.toString() },
-    process.env.JWT_SECRET,
-    { expiresIn: '1d', algorithm: 'HS256' }
-  )
-}
+const SIGNUP_RESPONSE_MESSAGE =
+  'Registration received. If the email is not already registered, an administrator will review the request.'
 
 function publicUser(user) {
   return {
@@ -64,41 +62,29 @@ export async function signup(req, res, next) {
     const email = parsed.data.email.toLowerCase()
     const password = parsed.data.password
     const role = parsed.data.role
+    const hashedPassword = await bcrypt.hash(password, 12)
+    const existingUser = await User.exists({ email })
 
-    const existingUser = await User.findOne({ email }).lean()
-
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists.',
-      })
+    if (!existingUser) {
+      try {
+        await User.create({
+          name,
+          email,
+          password: hashedPassword,
+          role,
+          status: 'pending',
+        })
+      } catch (error) {
+        if (error.code !== 11000) throw error
+      }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      role,
-      status: 'pending',
-    })
-
-    // No login token or authentication cookie is issued during registration.
+    // The response is intentionally identical for new and existing emails.
     return res.status(201).json({
       success: true,
-      message:
-        'Registration submitted successfully. Admin approval has not been granted yet. Please contact the admin.',
-      user: publicUser(user),
+      message: SIGNUP_RESPONSE_MESSAGE,
     })
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists.',
-      })
-    }
-
     return next(error)
   }
 }
@@ -166,7 +152,7 @@ export async function login(req, res, next) {
       })
     }
 
-    const token = createToken(user)
+    const { token, csrfToken } = createSessionToken(user)
 
     res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions())
 
@@ -174,6 +160,7 @@ export async function login(req, res, next) {
       success: true,
       message: 'Login successful.',
       user: publicUser(user),
+      csrfToken,
     })
   } catch (error) {
     return next(error)
@@ -181,7 +168,21 @@ export async function login(req, res, next) {
 }
 
 // POST /api/v1/auth/logout
-export function logout(req, res) {
+export async function logout(req, res, next) {
+  const token = req.cookies?.[AUTH_COOKIE_NAME]
+
+  if (token) {
+    try {
+      const decoded = verifySessionToken(token)
+
+      await revokeSession(decoded.jti, sessionExpiry(decoded))
+    } catch (error) {
+      if (!isJwtError(error)) {
+        return next(error)
+      }
+    }
+  }
+
   clearAuthCookie(res)
 
   return res.status(200).json({
@@ -195,6 +196,7 @@ export function getMe(req, res) {
   return res.status(200).json({
     success: true,
     user: publicUser(req.user),
+    csrfToken: req.csrfToken,
   })
 }
 
@@ -252,11 +254,27 @@ export async function changePassword(req, res, next) {
     }
 
     user.password = await bcrypt.hash(newPassword, 12)
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1
     await user.save()
+
+    await recordAudit(req, {
+      action: 'account.password.changed',
+      targetType: 'user',
+      targetId: user._id,
+      metadata: { sessionsInvalidated: true },
+    })
+
+    const { token, csrfToken } = createSessionToken(
+      user,
+      undefined,
+      { csrfToken: req.csrfToken },
+    )
+    res.cookie(AUTH_COOKIE_NAME, token, authCookieOptions())
 
     return res.status(200).json({
       success: true,
       message: 'Password changed successfully.',
+      csrfToken,
     })
   } catch (error) {
     return next(error)

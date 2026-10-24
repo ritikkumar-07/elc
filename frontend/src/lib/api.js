@@ -12,6 +12,14 @@ export const API_URL = (
 
 export const UNAUTHORIZED_EVENT = 'elc:unauthorized'
 
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
+
+let csrfToken = ''
+
+export function setCsrfToken(value) {
+  csrfToken = typeof value === 'string' ? value : ''
+}
+
 export class ApiError extends Error {
   constructor(message, status = 0, errors = [], code = '') {
     super(message)
@@ -46,11 +54,16 @@ export async function apiRequest(path, options = {}) {
     ...rest
   } = options
 
+  const method = String(rest.method || 'GET').toUpperCase()
   const config = {
     credentials: 'include',
     cache: 'no-store',
     ...rest,
     headers: { ...headers },
+  }
+
+  if (csrfToken && MUTATING_METHODS.has(method)) {
+    config.headers['X-CSRF-Token'] = csrfToken
   }
 
   if (body !== undefined) {
@@ -88,8 +101,12 @@ export async function apiRequest(path, options = {}) {
 
   const failed = !response.ok || result.success === false
 
-  if (failed && response.status === 401 && !skipAuthEvent) {
-    notifyUnauthorized()
+  if (failed && response.status === 401) {
+    setCsrfToken('')
+
+    if (!skipAuthEvent) {
+      notifyUnauthorized()
+    }
   }
 
   if (failed) {

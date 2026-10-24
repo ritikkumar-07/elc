@@ -217,8 +217,6 @@ export default function TeacherStudents() {
                   <tr>
                     <th className="px-4 py-3 font-semibold">Student</th>
                     <th className="px-4 py-3 font-semibold">Roll number</th>
-                    <th className="px-4 py-3 font-semibold">Contact</th>
-                    <th className="px-4 py-3 font-semibold">Guardian</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -235,17 +233,6 @@ export default function TeacherStudents() {
                       </td>
                       <td className="px-4 py-4 text-slate-700">
                         {student.rollNumber || '—'}
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {student.phone || '—'}
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {student.guardianName || '—'}
-                        {student.guardianPhone && (
-                          <p className="mt-1 text-xs text-slate-500">
-                            {student.guardianPhone}
-                          </p>
-                        )}
                       </td>
                       <td className="px-4 py-4">
                         <Badge tone="green">{student.status}</Badge>

@@ -46,6 +46,13 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+      required: true,
+    },
+
     rollNumber: {
       type: String,
       trim: true,
@@ -114,6 +121,13 @@ userSchema.index(
 )
 
 userSchema.index({ role: 1, status: 1, class: 1 })
+userSchema.index({
+  role: 1,
+  status: 1,
+  class: 1,
+  rollNumber: 1,
+  name: 1,
+})
 
 const User = mongoose.model('User', userSchema)
 

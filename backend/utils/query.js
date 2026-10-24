@@ -46,6 +46,20 @@ export function safeUser(user) {
   }
 }
 
+export function safeTeacherStudent(user) {
+  if (!user) return null
+
+  return {
+    id: String(user._id),
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    rollNumber: user.rollNumber || '',
+    class: user.class || null,
+  }
+}
+
 export function validationError(res, error, message = 'Invalid data.') {
   return res.status(400).json({
     success: false,

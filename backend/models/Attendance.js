@@ -50,6 +50,11 @@ const attendanceSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    revision: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true },
 )
@@ -58,6 +63,8 @@ attendanceSchema.index(
   { class: 1, dateKey: 1, session: 1 },
   { unique: true },
 )
+
+attendanceSchema.index({ 'records.student': 1, dateKey: -1 })
 
 const Attendance = mongoose.model('Attendance', attendanceSchema)
 

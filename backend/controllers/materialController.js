@@ -4,10 +4,17 @@ import { z } from 'zod'
 import Class from '../models/Class.js'
 import StudyMaterial from '../models/StudyMaterial.js'
 import Subject from '../models/Subject.js'
+import { recordAudit } from '../utils/audit.js'
 import {
   removeUploadedFile,
   uploadPdfToCloudinary,
 } from '../middleware/uploadMiddleware.js'
+import {
+  AssetUnavailableError,
+  buildMaterialAssetUrl,
+  fetchCloudinaryPdf,
+  safePdfFileName,
+} from '../utils/cloudinaryAssets.js'
 import {
   escapeRegex,
   invalidId,
@@ -225,6 +232,7 @@ export async function listMaterials(req, res, next) {
 
 export async function createMaterial(req, res, next) {
   let uploadedAsset = null
+  let persisted = false
 
   try {
     if (!req.file) {
@@ -274,21 +282,34 @@ export async function createMaterial(req, res, next) {
       type: parsed.data.type,
       class: parsed.data.classId,
       subject: subject?._id || null,
-      fileName: req.file.originalname,
+      fileName: safePdfFileName(req.file.originalname),
       // Keep required legacy field populated for compatibility.
       storedName: uploadedAsset.public_id,
       cloudinaryPublicId: uploadedAsset.public_id,
       cloudinaryResourceType: uploadedAsset.resource_type || 'raw',
+      cloudinaryDeliveryType: uploadedAsset.type || 'authenticated',
       cloudinaryUrl: uploadedAsset.secure_url,
       mimeType: 'application/pdf',
       size: req.file.size,
       uploadedBy: req.user._id,
       isPublished: parseBoolean(parsed.data.isPublished, true),
     })
+    persisted = true
 
     const created = await populateMaterial(
       StudyMaterial.findById(material._id),
     ).lean()
+
+    await recordAudit(req, {
+      action: 'material.created',
+      targetType: 'material',
+      targetId: material._id,
+      metadata: {
+        classId: String(material.class),
+        type: material.type,
+        isPublished: material.isPublished,
+      },
+    })
 
     return res.status(201).json({
       success: true,
@@ -296,8 +317,12 @@ export async function createMaterial(req, res, next) {
       data: materialResponse(created),
     })
   } catch (error) {
-    if (uploadedAsset?.public_id) {
-      await removeUploadedFile(uploadedAsset.public_id)
+    if (!persisted && uploadedAsset?.public_id) {
+      await removeUploadedFile(
+        uploadedAsset.public_id,
+        uploadedAsset.resource_type || 'raw',
+        uploadedAsset.type || 'authenticated',
+      )
     }
     return next(error)
   }
@@ -399,6 +424,19 @@ export async function updateMaterial(req, res, next) {
       StudyMaterial.findById(material._id),
     ).lean()
 
+    await recordAudit(req, {
+      action: 'material.updated',
+      targetType: 'material',
+      targetId: material._id,
+      metadata: {
+        classId: String(material.class),
+        type: material.type,
+        isPublished: material.isPublished,
+        isArchived: material.isArchived,
+        fields: Object.keys(parsed.data),
+      },
+    })
+
     return res.status(200).json({
       success: true,
       message: 'Study material updated successfully.',
@@ -448,30 +486,42 @@ export async function downloadMaterial(req, res, next) {
       })
     }
 
-    const assetUrl = material.cloudinaryUrl
-    if (!assetUrl || !material.cloudinaryPublicId) {
+    const assetUrl = buildMaterialAssetUrl(material)
+    if (!assetUrl) {
       return notFound(
         res,
         'This PDF is not stored in Cloudinary yet. Legacy files need to be migrated.',
       )
     }
 
-    // Proxy the PDF through this authenticated endpoint so the browser does
-    // not receive the Cloudinary URL in the API response.
-    const upstream = await fetch(assetUrl)
+    let pdf
 
-    if (!upstream.ok || !upstream.body) {
-      console.error('Cloudinary PDF fetch failed:', upstream.status)
-      return notFound(res, 'The stored PDF file is unavailable.')
+    try {
+      pdf = await fetchCloudinaryPdf(assetUrl)
+    } catch (error) {
+      if (error instanceof AssetUnavailableError) {
+        console.error('Cloudinary PDF fetch failed.')
+        return res.status(502).json({
+          success: false,
+          message: 'The stored PDF file is unavailable.',
+        })
+      }
+
+      throw error
     }
 
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(material.fileName || 'material.pdf')}`)
-    res.setHeader('X-Content-Type-Options', 'nosniff')
-    res.setHeader('Cache-Control', 'private, no-store')
+    const fileName = safePdfFileName(material.fileName)
 
-    const { Readable } = await import('node:stream')
-    return Readable.fromWeb(upstream.body).pipe(res)
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="material.pdf"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    )
+    res.setHeader('Content-Length', String(pdf.length))
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0')
+
+    return res.send(pdf)
   } catch (error) {
     return next(error)
   }

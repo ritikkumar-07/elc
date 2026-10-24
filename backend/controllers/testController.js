@@ -6,6 +6,7 @@ import Mark from '../models/Mark.js'
 import Subject from '../models/Subject.js'
 import Test from '../models/Test.js'
 import User from '../models/User.js'
+import { recordAudit } from '../utils/audit.js'
 import {
   escapeRegex,
   invalidId,
@@ -193,6 +194,64 @@ function markResponse(mark, test = mark.test) {
   }
 }
 
+function markPublicationPipeline(userId, at) {
+  return [
+    {
+      $set: {
+        status: 'published',
+        publishedBy: new mongoose.Types.ObjectId(String(userId)),
+        publishedAt: at,
+        updatedAt: at,
+        history: {
+          $concatArrays: [
+            { $ifNull: ['$history', []] },
+            [
+              {
+                action: 'published',
+                previousMarks: '$marksObtained',
+                marksObtained: '$marksObtained',
+                changedBy: new mongoose.Types.ObjectId(
+                  String(userId),
+                ),
+                at,
+              },
+            ],
+          ],
+        },
+      },
+    },
+  ]
+}
+
+function markUnpublicationPipeline(userId, at) {
+  return [
+    {
+      $set: {
+        status: 'draft',
+        publishedBy: null,
+        publishedAt: null,
+        updatedAt: at,
+        history: {
+          $concatArrays: [
+            { $ifNull: ['$history', []] },
+            [
+              {
+                action: 'unpublished',
+                previousMarks: '$marksObtained',
+                marksObtained: '$marksObtained',
+                changedBy: new mongoose.Types.ObjectId(
+                  String(userId),
+                ),
+                at,
+              },
+            ],
+          ],
+        },
+      },
+    },
+  ]
+}
+
 function getTestFilter(req) {
   const filter = {}
 
@@ -370,7 +429,7 @@ export async function getTest(req, res, next) {
       })
     }
 
-    if (!canManageTest(req.user, test)) {
+    if (!(await canManageTest(req.user, test))) {
       return res.status(403).json({
         success: false,
         message: 'You do not have access to this test.',
@@ -451,6 +510,17 @@ export async function createTest(req, res, next) {
     const created = await populateTest(
       Test.findById(test._id),
     ).lean()
+
+    await recordAudit(req, {
+      action: 'test.created',
+      targetType: 'test',
+      targetId: test._id,
+      metadata: {
+        status: test.status,
+        classId: String(test.class),
+        subjectScoped: Boolean(test.subject),
+      },
+    })
 
     return res.status(201).json({
       success: true,
@@ -671,6 +741,16 @@ export async function updateTest(req, res, next) {
       Test.findById(test._id),
     ).lean()
 
+    await recordAudit(req, {
+      action: 'test.updated',
+      targetType: 'test',
+      targetId: test._id,
+      metadata: {
+        status: test.status,
+        fields: Object.keys(parsed.data),
+      },
+    })
+
     return res.status(200).json({
       success: true,
       message: 'Test updated successfully.',
@@ -838,6 +918,13 @@ export async function saveMarks(req, res, next) {
       }
     }
 
+    await recordAudit(req, {
+      action: 'marks.saved',
+      targetType: 'test',
+      targetId: test._id,
+      metadata: { saved, cleared },
+    })
+
     return res.status(200).json({
       success: true,
       message:
@@ -851,6 +938,14 @@ export async function saveMarks(req, res, next) {
       },
     })
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'These marks changed in another request. Reload the marks and try again.',
+      })
+    }
+
     return next(error)
   }
 }
@@ -958,27 +1053,90 @@ export async function publishResults(req, res, next) {
 
     const now = new Date()
 
-    for (const mark of marks) {
-      if (mark.status !== 'published') {
-        mark.status = 'published'
-        mark.publishedBy = req.user._id
-        mark.publishedAt = now
-        mark.history.push({
-          action: 'published',
-          previousMarks: mark.marksObtained,
-          marksObtained: mark.marksObtained,
-          changedBy: req.user._id,
-          at: now,
-        })
+    if (test.resultsPublishedAt) {
+      await Mark.updateMany(
+        { test: test._id, status: { $ne: 'published' } },
+        markPublicationPipeline(
+          req.user._id,
+          test.resultsPublishedAt,
+        ),
+      )
 
-        await mark.save()
-      }
+      await recordAudit(req, {
+        action: 'results.published',
+        targetType: 'test',
+        targetId: test._id,
+        metadata: {
+          alreadyPublished: true,
+          publishedCount: marks.length,
+        },
+      })
+
+      return res.status(200).json({
+        success: true,
+        message: 'Results are already published.',
+        data: {
+          testId: String(test._id),
+          published: marks.length,
+          publishedAt: test.resultsPublishedAt,
+        },
+      })
     }
 
-    test.status = 'closed'
-    test.resultsPublishedAt = now
-    test.resultsPublishedBy = req.user._id
-    await test.save()
+    const previousState = {
+      status: test.status,
+      resultsPublishedAt: test.resultsPublishedAt,
+      resultsPublishedBy: test.resultsPublishedBy,
+    }
+
+    const claimed = await Test.findOneAndUpdate(
+      {
+        _id: test._id,
+        resultsPublishedAt: null,
+      },
+      {
+        $set: {
+          status: 'closed',
+          resultsPublishedAt: now,
+          resultsPublishedBy: req.user._id,
+        },
+      },
+      { new: true },
+    ).lean()
+
+    if (!claimed) {
+      return res.status(409).json({
+        success: false,
+        message:
+          'Results were changed by another request. Reload and try again.',
+      })
+    }
+
+    try {
+      await Mark.updateMany(
+        { test: test._id, status: { $ne: 'published' } },
+        markPublicationPipeline(req.user._id, now),
+      )
+    } catch (error) {
+      await Test.updateOne(
+        { _id: test._id, resultsPublishedAt: now },
+        { $set: previousState },
+      ).catch(() => {
+        console.error('Unable to roll back result publication.')
+      })
+
+      throw error
+    }
+
+    await recordAudit(req, {
+      action: 'results.published',
+      targetType: 'test',
+      targetId: test._id,
+      metadata: {
+        alreadyPublished: false,
+        publishedCount: marks.length,
+      },
+    })
 
     return res.status(200).json({
       success: true,
@@ -1013,36 +1171,77 @@ export async function unpublishResults(req, res, next) {
       })
     }
 
-    const marks = await Mark.find({
-      test: test._id,
-      status: 'published',
-    })
+    if (!test.resultsPublishedAt) {
+      return res.status(200).json({
+        success: true,
+        message: 'Results are already unpublished.',
+        data: {
+          testId: String(test._id),
+          unpublished: 0,
+        },
+      })
+    }
 
+    const nextStatus =
+      test.status === 'closed' ? 'published' : test.status
     const now = new Date()
+    const previousState = {
+      status: test.status,
+      resultsPublishedAt: test.resultsPublishedAt,
+      resultsPublishedBy: test.resultsPublishedBy,
+    }
 
-    for (const mark of marks) {
-      mark.status = 'draft'
-      mark.publishedBy = null
-      mark.publishedAt = null
-      mark.history.push({
-        action: 'unpublished',
-        previousMarks: mark.marksObtained,
-        marksObtained: mark.marksObtained,
-        changedBy: req.user._id,
-        at: now,
+    const claimed = await Test.findOneAndUpdate(
+      {
+        _id: test._id,
+        resultsPublishedAt: { $ne: null },
+      },
+      {
+        $set: {
+          resultsPublishedAt: null,
+          resultsPublishedBy: null,
+          status: nextStatus,
+        },
+      },
+      { new: true },
+    ).lean()
+
+    if (!claimed) {
+      return res.status(200).json({
+        success: true,
+        message: 'Results are already unpublished.',
+        data: {
+          testId: String(test._id),
+          unpublished: 0,
+        },
+      })
+    }
+
+    let unpublished = 0
+
+    try {
+      const result = await Mark.updateMany(
+        { test: test._id, status: 'published' },
+        markUnpublicationPipeline(req.user._id, now),
+      )
+      unpublished = result.modifiedCount || 0
+    } catch (error) {
+      await Test.updateOne(
+        { _id: test._id, resultsPublishedAt: null },
+        { $set: previousState },
+      ).catch(() => {
+        console.error('Unable to roll back result unpublication.')
       })
 
-      await mark.save()
+      throw error
     }
 
-    test.resultsPublishedAt = null
-    test.resultsPublishedBy = null
-
-    if (test.status === 'closed') {
-      test.status = 'published'
-    }
-
-    await test.save()
+    await recordAudit(req, {
+      action: 'results.unpublished',
+      targetType: 'test',
+      targetId: test._id,
+      metadata: { unpublishedCount: unpublished },
+    })
 
     return res.status(200).json({
       success: true,
@@ -1050,7 +1249,7 @@ export async function unpublishResults(req, res, next) {
         'Results unpublished. Marks are now editable drafts.',
       data: {
         testId: String(test._id),
-        unpublished: marks.length,
+        unpublished,
       },
     })
   } catch (error) {

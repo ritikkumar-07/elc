@@ -140,11 +140,19 @@ import announcementRoutes from './routes/announcementRoutes.js'
 import attendanceRoutes from './routes/attendanceRoutes.js'
 import dashboardRoutes from './routes/dashboardRoutes.js'
 import analyticsRoutes from './routes/analyticsRoutes.js'
+import { noStore } from './middleware/cacheMiddleware.js'
+import { csrfProtection } from './middleware/csrfMiddleware.js'
+import { requestContext } from './middleware/requestContext.js'
+import {
+  parseTrustProxy,
+  validateEnvironment,
+} from './utils/environment.js'
 
 const app = express()
-app.set('trust proxy', 1)
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY))
 const PORT = Number(process.env.PORT) || 5000
 
+app.use(requestContext)
 app.use(helmet())
 
 function normalizeOrigin(value) {
@@ -199,7 +207,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   }),
 )
 
@@ -214,7 +222,6 @@ app.use((req, res, next) => {
   const requestOrigin = normalizeOrigin(origin || referer || '')
 
   if (!origin && !referer) {
-    // Non-browser API clients do not send browser origin headers.
     return next()
   }
 
@@ -229,8 +236,9 @@ app.use((req, res, next) => {
   })
 })
 
-app.use(express.json({ limit: '10kb' }))
+app.use(express.json({ limit: '128kb' }))
 app.use(cookieParser())
+app.use('/api', noStore)
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -244,6 +252,7 @@ const apiLimiter = rateLimit({
 })
 
 app.use('/api', apiLimiter)
+app.use(csrfProtection)
 
 // API routes
 app.use('/api/v1/auth', authRoutes)
@@ -289,57 +298,26 @@ app.use((err, req, res, next) => {
     return next(err)
   }
 
-  console.error('Request error:', err.message)
+  const requestPath = String(req.originalUrl || req.url || '').split(
+    '?',
+  )[0]
+  const production = process.env.NODE_ENV === 'production'
+  const detail = production
+    ? `${err.name || 'Error'}${err.code ? ` (${err.code})` : ''}`
+    : err.message
+
+  console.error(
+    `Request error [${req.requestId || 'no-request-id'}] ${req.method} ${requestPath}: ${detail}`,
+  )
 
   res.status(err.status || 500).json({
     success: false,
-    message:
-      process.env.NODE_ENV === 'production'
-        ? 'An unexpected server error occurred.'
-        : err.message,
+    message: production
+      ? err.safeMessage || 'An unexpected server error occurred.'
+      : err.message,
+    ...(err.partial === true ? { partial: true } : {}),
   })
 })
-
-function validateEnvironment() {
-  const problems = []
-
-  if (!process.env.MONGODB_URI) {
-    problems.push('MONGODB_URI is required')
-  } else if (
-    !/^mongodb(\+srv)?:\/\//i.test(process.env.MONGODB_URI)
-  ) {
-    problems.push(
-      'MONGODB_URI must start with mongodb:// or mongodb+srv://',
-    )
-  }
-
-  if (
-    !process.env.JWT_SECRET ||
-    process.env.JWT_SECRET.length < 32
-  ) {
-    problems.push(
-      'JWT_SECRET must contain at least 32 characters',
-    )
-  }
-
-  if (problems.length > 0) {
-    throw new Error(
-      `Invalid environment configuration: ${problems.join('; ')}. Check backend/.env.`,
-    )
-  }
-}
-
-function hasDatabaseName(uri) {
-  try {
-    const parsed = new URL(
-      uri.replace(/^mongodb(\+srv)?:\/\//i, 'http://'),
-    )
-
-    return Boolean(parsed.pathname.replace(/^\/+/, ''))
-  } catch {
-    return false
-  }
-}
 
 function redactErrorMessage(message) {
   return String(message)
@@ -353,9 +331,9 @@ function redactErrorMessage(message) {
 // Start after MongoDB connects
 async function startServer() {
   try {
-    validateEnvironment()
+    const environment = validateEnvironment()
 
-    if (!hasDatabaseName(process.env.MONGODB_URI)) {
+    if (!environment.hasDatabaseName) {
       console.warn(
         'MONGODB_URI has no database name. MongoDB will use its default "test" database; add /<database> to the URI to make this explicit.',
       )

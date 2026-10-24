@@ -1,9 +1,29 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import {
+  Award,
+  BarChart3,
+  BookOpen,
+  CalendarCheck,
+  ChevronDown,
+  ClipboardCheck,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  Image,
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Megaphone,
+  Menu,
+  UserRound,
+  Users,
+  X,
+} from 'lucide-react'
 
 import { useAuth } from '../../context/AuthContext.jsx'
-import { apiRequest } from '../../lib/api.js'
+import { apiRequest, setCsrfToken } from '../../lib/api.js'
 import Footer from '../layout/Footer.jsx'
 import './DashboardBorders.css'
 
@@ -12,28 +32,28 @@ const roleItems = {
     {
       section: 'MAIN',
       links: [
-        ['Overview', '/admin', '▦'],
-        ['Students', '/admin/students', '♙'],
-        ['Teachers', '/admin/teachers', '♧'],
-        ['Registration Approvals', '/admin/registrations', '✓'],
+        ['Overview', '/admin', LayoutDashboard],
+        ['Students', '/admin/students', Users],
+        ['Teachers', '/admin/teachers', GraduationCap],
+        ['Registration Approvals', '/admin/registrations', ClipboardCheck],
       ],
     },
     {
       section: 'ACADEMICS',
       links: [
-        ['Classes & Subjects', '/admin/classes', '▤'],
-        ['Study Materials', '/admin/notes', '▧'],
-        ['Tests & Papers', '/admin/tests', '✓'],
-        ['Results Analytics', '/admin/results', '↗'],
-        ['Attendance', '/admin/attendance', '◷'],
-        ['Announcements', '/admin/announcements', '♧'],
+        ['Classes & Subjects', '/admin/classes', BookOpen],
+        ['Study Materials', '/admin/notes', FolderOpen],
+        ['Tests & Papers', '/admin/tests', FileText],
+        ['Results Analytics', '/admin/results', BarChart3],
+        ['Attendance', '/admin/attendance', CalendarCheck],
+        ['Announcements', '/admin/announcements', Megaphone],
       ],
     },
     {
       section: 'INSTITUTE',
       links: [
-        ['Topper Management', '/admin/toppers', '☆'],
-        ['Hero Banners', '/admin/hero-banners', '▣'],
+        ['Topper Management', '/admin/toppers', Award],
+        ['Hero Banners', '/admin/hero-banners', Image],
       ],
     },
   ],
@@ -41,33 +61,33 @@ const roleItems = {
     {
       section: 'MAIN',
       links: [
-        ['Overview', '/teacher', '▦'],
-        ['My Students', '/teacher/students', '♙'],
+        ['Overview', '/teacher', LayoutDashboard],
+        ['My Students', '/teacher/students', Users],
       ],
     },
     {
       section: 'ACADEMICS',
       links: [
-        ['Study Materials', '/teacher/notes', '▧'],
-        ['Tests & Results', '/teacher/tests', '✓'],
-        ['Results Analytics', '/teacher/results', '↗'],
-        ['Attendance', '/teacher/attendance', '◷'],
-        ['Announcements', '/teacher/announcements', '♧'],
+        ['Study Materials', '/teacher/notes', FolderOpen],
+        ['Tests & Results', '/teacher/tests', FileText],
+        ['Results Analytics', '/teacher/results', BarChart3],
+        ['Attendance', '/teacher/attendance', CalendarCheck],
+        ['Announcements', '/teacher/announcements', Megaphone],
       ],
     },
   ],
   student: [
     {
       section: 'MAIN',
-      links: [['Overview', '/student', '▦']],
+      links: [['Overview', '/student', LayoutDashboard]],
     },
     {
       section: 'LEARNING',
       links: [
-        ['Class Notes', '/student/notes', '▧'],
-        ['Tests', '/student/tests', '✓'],
-        ['My Results', '/student/results', '↗'],
-        ['Attendance', '/student/attendance', '◷'],
+        ['Class Notes', '/student/notes', FolderOpen],
+        ['Tests', '/student/tests', FileText],
+        ['My Results', '/student/results', BarChart3],
+        ['Attendance', '/student/attendance', CalendarCheck],
       ],
     },
   ],
@@ -152,11 +172,15 @@ export default function DashboardLayout({
     setSaving(true)
 
     try {
-      await apiRequest('/api/v1/auth/change-password', {
-        method: 'POST',
-        body: { currentPassword, newPassword },
-      })
+      const result = await apiRequest(
+        '/api/v1/auth/change-password',
+        {
+          method: 'POST',
+          body: { currentPassword, newPassword },
+        },
+      )
 
+      setCsrfToken(result.csrfToken)
       setPasswordMessage('Password changed successfully.')
       setCurrentPassword('')
       setNewPassword('')
@@ -178,7 +202,7 @@ export default function DashboardLayout({
         : '/admin'
 
   return (
-    <div className="elc-layout flex min-h-screen flex-col bg-white text-slate-900">
+    <div className="elc-layout flex min-h-screen flex-col bg-slate-50 text-slate-900">
       {/* Shared ELC navbar */}
       <header className="sticky top-0 z-50 w-full shrink-0 border-b border-slate-200 bg-white print:hidden">
         <div className="mx-auto flex min-h-[72px] w-full items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
@@ -240,12 +264,10 @@ export default function DashboardLayout({
                   {currentUser?.name || 'Account'}
                 </span>
 
-                <span
+                <ChevronDown
                   aria-hidden="true"
-                  className="pr-1 text-xs text-slate-500"
-                >
-                  ⌄
-                </span>
+                  className="mr-1 h-4 w-4 text-slate-500"
+                />
               </button>
 
               {profileMenu && (
@@ -269,8 +291,12 @@ export default function DashboardLayout({
                       setProfileMenu(false)
                       setModal('profile')
                     }}
-                    className="block w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                   >
+                    <UserRound
+                      className="h-4 w-4 text-slate-400"
+                      aria-hidden="true"
+                    />
                     My profile
                   </button>
 
@@ -282,8 +308,12 @@ export default function DashboardLayout({
                       setPasswordMessage('')
                       setModal('password')
                     }}
-                    className="block w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                   >
+                    <KeyRound
+                      className="h-4 w-4 text-slate-400"
+                      aria-hidden="true"
+                    />
                     Change password
                   </button>
 
@@ -294,8 +324,12 @@ export default function DashboardLayout({
                       setProfileMenu(false)
                       layoutLogout?.()
                     }}
-                    className="block w-full px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                   >
+                    <LogOut
+                      className="h-4 w-4 text-red-500"
+                      aria-hidden="true"
+                    />
                     Logout
                   </button>
                 </div>
@@ -326,8 +360,8 @@ export default function DashboardLayout({
           }`}
         >
           {/* Drawer heading, mobile only */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 lg:hidden">
-            <span className="text-sm font-bold">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 lg:hidden">
+            <span className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
               Dashboard
             </span>
 
@@ -335,62 +369,69 @@ export default function DashboardLayout({
               type="button"
               onClick={() => setSidebarOpen(false)}
               aria-label="Close navigation"
-              className="grid h-9 w-9 place-items-center rounded-lg text-xl text-slate-600 hover:bg-slate-100"
+              className="grid h-9 w-9 place-items-center rounded-lg text-slate-600 hover:bg-slate-100"
             >
-              ×
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
 
           <nav
-            className="py-5"
+            className="px-3 py-4"
             aria-label="Institute dashboard sections"
           >
             {visibleItems.map((group) => (
-              <div key={group.section} className="mb-5">
-                <p className="mb-2 px-7 text-[10px] font-semibold tracking-[0.08em] text-slate-400">
+              <div key={group.section} className="mb-5 last:mb-2">
+                <p className="mb-1.5 px-3 text-[10px] font-bold tracking-[0.14em] text-slate-400">
                   {group.section}
                 </p>
 
-                {group.links.map(([label, path, icon]) => (
-                  <NavLink
-                    key={path}
-                    to={path}
-                    end={path === `/${currentUser?.role}`}
-                    onClick={() => setSidebarOpen(false)}
-                    className={({ isActive }) =>
-                      `flex min-h-[48px] items-center gap-4 border-l-[3px] px-6 text-[13px] transition ${
-                        isActive
-                          ? 'border-[#6657d9] bg-[#e7e2ff] font-semibold text-[#5744c8]'
-                          : 'border-transparent text-slate-700 hover:bg-slate-100'
-                      }`
-                    }
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="grid w-5 place-items-center text-lg"
+                <div className="space-y-0.5">
+                  {group.links.map(([label, path, Icon]) => (
+                    <NavLink
+                      key={path}
+                      to={path}
+                      end={path === `/${currentUser?.role}`}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `group flex min-h-[40px] items-center gap-3 rounded-lg px-3 text-[13px] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
+                          isActive
+                            ? 'bg-blue-50 font-semibold text-[#19366e] shadow-[inset_3px_0_0_#19366e]'
+                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                        }`
+                      }
                     >
-                      {icon}
-                    </span>
-
-                    <span>{label}</span>
-                  </NavLink>
-                ))}
+                      {({ isActive }) => (
+                        <>
+                          <Icon
+                            aria-hidden="true"
+                            className={`h-4 w-4 shrink-0 ${
+                              isActive
+                                ? 'text-[#19366e]'
+                                : 'text-slate-400 group-hover:text-slate-600'
+                            }`}
+                          />
+                          <span className="truncate">{label}</span>
+                        </>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
               </div>
             ))}
           </nav>
 
-          <div className="mx-5 mb-5 rounded-xl bg-[#f5f3ff] p-4 text-xs text-slate-600">
-            <p className="font-bold text-[#5744c8]">
+          <div className="mx-4 mb-5 rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs text-slate-600">
+            <p className="font-bold text-[#19366e]">
               Learn Today. Lead Tomorrow.
             </p>
-            <p className="mt-1">
+            <p className="mt-1 text-slate-500">
               Expert Learning Center
             </p>
           </div>
         </aside>
 
         {/* Main dashboard area */}
-        <div className="flex min-h-[calc(100vh-72px)] min-w-0 flex-1 flex-col bg-white">
+        <div className="flex min-h-[calc(100vh-72px)] min-w-0 flex-1 flex-col bg-slate-50">
           {/* Mobile dashboard toolbar */}
           <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 lg:hidden print:hidden">
             <button
@@ -401,7 +442,8 @@ export default function DashboardLayout({
               onClick={() => setSidebarOpen(true)}
               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
-              <span aria-hidden="true">☰</span>
+              <Menu className="h-4 w-4" aria-hidden="true" />
+              Menu
             </button>
 
             <Link
@@ -453,9 +495,9 @@ export default function DashboardLayout({
                 type="button"
                 aria-label="Close dialog"
                 onClick={() => setModal(null)}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xl text-slate-500 hover:bg-slate-100"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
               >
-                ×
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
 

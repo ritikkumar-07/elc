@@ -7,15 +7,35 @@ import {
   allowRoles,
   requireAuth,
 } from '../middleware/authMiddleware.js'
+import { setPublicCache } from '../middleware/cacheMiddleware.js'
 import {
   removeUploadedFile,
+  removeUploadedFileStrict,
   uploadTopperPhoto,
   uploadTopperPhotoToCloudinary,
 } from '../middleware/uploadMiddleware.js'
+import { cloudinaryPublicIdFromUrl } from '../utils/cloudinaryAssets.js'
+import { recordAudit } from '../utils/audit.js'
 
 const router = Router()
 
-const photoUrlField = z.string().trim().max(1000).optional()
+function isHttpUrl(value) {
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol)
+  } catch {
+    return false
+  }
+}
+
+const photoUrlField = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine(
+    (value) => !value || isHttpUrl(value),
+    'Photo URL must use HTTP or HTTPS.',
+  )
+  .optional()
 
 const booleanField = z.preprocess((value) => {
   if (value === 'true') return true
@@ -140,6 +160,29 @@ export function selectPhotoUrl(uploadedAsset, submittedUrl) {
   return uploadedAsset?.secure_url || submittedUrl
 }
 
+async function removeReplacedTopperAsset(previousUrl, nextUrl) {
+  const previousId = cloudinaryPublicIdFromUrl(
+    previousUrl,
+    'elc-toppers/',
+  )
+
+  if (!previousId) return true
+
+  const nextId = cloudinaryPublicIdFromUrl(
+    nextUrl,
+    'elc-toppers/',
+  )
+
+  if (previousId === nextId) return true
+
+  try {
+    await removeUploadedFileStrict(previousId, 'image')
+    return true
+  } catch {
+    return false
+  }
+}
+
 function topperResponse(item) {
   return {
     ...item,
@@ -173,10 +216,7 @@ router.get('/', async (req, res, next) => {
       .limit(limit)
       .lean()
 
-    res.set(
-      'Cache-Control',
-      'public, max-age=60, stale-while-revalidate=300',
-    )
+    setPublicCache(res)
 
     res.status(200).json({
       success: true,
@@ -259,6 +299,13 @@ router.post('/', ...adminOnly, uploadTopperPhoto, async (req, res, next) => {
     })
     persisted = true
 
+    await recordAudit(req, {
+      action: 'topper.created',
+      targetType: 'topper',
+      targetId: topper._id,
+      metadata: { isPublished: topper.isPublished },
+    })
+
     res.status(201).json({
       success: true,
       message: 'Topper created successfully.',
@@ -304,6 +351,8 @@ async function updateTopper(req, res, next) {
       })
     }
 
+    const previousPhotoUrl = topper.photoUrl
+
     if (req.file) {
       uploadedAsset = await uploadTopperPhotoToCloudinary(req.file)
       topper.photoUrl = selectPhotoUrl(uploadedAsset, topper.photoUrl)
@@ -337,10 +386,36 @@ async function updateTopper(req, res, next) {
     await topper.save()
     persisted = true
 
+    const photoCleanupComplete = await removeReplacedTopperAsset(
+      previousPhotoUrl,
+      topper.photoUrl,
+    )
+
+    await recordAudit(req, {
+      action: 'topper.updated',
+      targetType: 'topper',
+      targetId: topper._id,
+      metadata: {
+        isPublished: topper.isPublished,
+        photoCleanupComplete,
+      },
+    })
+
     res.json({
       success: true,
       message: 'Topper updated successfully.',
       data: topperResponse(topper.toObject()),
+      ...(photoCleanupComplete
+        ? {}
+        : {
+            warnings: [
+              {
+                code: 'PHOTO_CLEANUP_FAILED',
+                message:
+                  'The topper was updated, but the previous photo could not be removed. Retry cleanup later.',
+              },
+            ],
+          }),
     })
   } catch (error) {
     if (!persisted && uploadedAsset?.public_id) {
@@ -363,7 +438,7 @@ router.delete('/:id', ...adminOnly, async (req, res, next) => {
       })
     }
 
-    const topper = await Topper.findByIdAndDelete(req.params.id)
+    const topper = await Topper.findById(req.params.id)
 
     if (!topper) {
       return res.status(404).json({
@@ -372,10 +447,66 @@ router.delete('/:id', ...adminOnly, async (req, res, next) => {
       })
     }
 
+    const photoId = cloudinaryPublicIdFromUrl(
+      topper.photoUrl,
+      'elc-toppers/',
+    )
+    let photoRemoved = false
+    let photoShared = false
+
+    if (photoId) {
+      photoShared = Boolean(
+        await Topper.exists({
+          _id: { $ne: topper._id },
+          photoUrl: topper.photoUrl,
+        }),
+      )
+
+      if (!photoShared) {
+        await removeUploadedFileStrict(photoId, 'image')
+        photoRemoved = true
+      }
+    }
+
+    let deleted
+
+    try {
+      deleted = await Topper.findByIdAndDelete(topper._id)
+    } catch (error) {
+      if (photoRemoved) {
+        error.partial = true
+        error.safeMessage =
+          'The photo was removed, but the topper record could not be deleted. Retry deletion.'
+      }
+
+      throw error
+    }
+
+    if (!deleted) {
+      return res.status(409).json({
+        success: false,
+        message: photoRemoved
+          ? 'The topper changed while it was being deleted. Its previous photo was already removed. Reload and try again.'
+          : 'The topper changed while it was being deleted. Reload and try again.',
+        partial: photoRemoved,
+      })
+    }
+
+    await recordAudit(req, {
+      action: 'topper.deleted',
+      targetType: 'topper',
+      targetId: deleted._id,
+      metadata: { photoRemoved, photoShared },
+    })
+
     res.json({
       success: true,
       message: 'Topper deleted successfully.',
-      data: { id: String(topper._id) },
+      data: {
+        id: String(deleted._id),
+        photoRemoved,
+        photoShared,
+      },
     })
   } catch (error) {
     next(error)

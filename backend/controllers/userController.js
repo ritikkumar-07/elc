@@ -4,12 +4,14 @@ import { z } from 'zod'
 
 import User from '../models/User.js'
 import Class from '../models/Class.js'
+import { recordAudit } from '../utils/audit.js'
 import {
   escapeRegex,
   invalidId,
   notFound,
   paginationMeta,
   parsePagination,
+  safeTeacherStudent,
   safeUser,
   validationError,
 } from '../utils/query.js'
@@ -295,6 +297,17 @@ async function createPerson(req, res, next, role, schema) {
 
     const created = await populateUser(User.findById(user._id)).lean()
 
+    await recordAudit(req, {
+      action: 'user.created',
+      targetType: 'user',
+      targetId: user._id,
+      metadata: {
+        role,
+        classAssigned: Boolean(classId),
+        assignedClassCount: assignedClasses.length,
+      },
+    })
+
     return res.status(201).json({
       success: true,
       message: `${role === 'student' ? 'Student' : 'Teacher'} account created successfully.`,
@@ -452,11 +465,27 @@ async function updatePerson(req, res, next, role, schema) {
       user.assignedClasses = validated
     }
 
+    const changedFields = Object.keys(parsed.data)
+
     await user.save()
 
     const updated = await populateUser(
       User.findById(user._id),
     ).lean()
+
+    await recordAudit(req, {
+      action: 'user.updated',
+      targetType: 'user',
+      targetId: user._id,
+      metadata: {
+        role,
+        fields: changedFields,
+        assignedClassCount:
+          role === 'teacher'
+            ? (user.assignedClasses || []).length
+            : undefined,
+      },
+    })
 
     return res.status(200).json({
       success: true,
@@ -512,8 +541,27 @@ async function updateStatus(req, res, next, role) {
       })
     }
 
+    const previousStatus = user.status
+    const wasActive = user.status === 'active'
     user.status = parsed.data.status
+
+    if (wasActive && user.status !== 'active') {
+      user.tokenVersion = Number(user.tokenVersion || 0) + 1
+    }
+
     await user.save()
+
+    await recordAudit(req, {
+      action: 'user.status.changed',
+      targetType: 'user',
+      targetId: user._id,
+      metadata: {
+        role,
+        previousStatus,
+        nextStatus: user.status,
+        sessionsRevoked: wasActive && user.status !== 'active',
+      },
+    })
 
     return res.status(200).json({
       success: true,
@@ -612,7 +660,7 @@ export async function listAssignedStudents(req, res, next) {
     return res.status(200).json({
       success: true,
       count: students.length,
-      data: students.map(safeUser),
+      data: students.map(safeTeacherStudent),
       pagination: paginationMeta(total, page, limit),
     })
   } catch (error) {
@@ -641,7 +689,7 @@ export async function getAssignedStudent(req, res, next) {
 
     return res.status(200).json({
       success: true,
-      data: safeUser(student),
+      data: safeTeacherStudent(student),
     })
   } catch (error) {
     return next(error)

@@ -1,10 +1,14 @@
 
-import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import {
   AUTH_COOKIE_NAME,
   clearAuthCookie,
 } from '../utils/authCookie.js'
+import {
+  isJwtError,
+  verifySessionToken,
+} from '../utils/sessionToken.js'
+import { isSessionRevoked } from '../utils/sessionRevocation.js'
 
 // Verify login cookie and load the active user
 export async function requireAuth(req, res, next) {
@@ -26,11 +30,11 @@ export async function requireAuth(req, res, next) {
       })
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
-      algorithms: ['HS256'],
-    })
-
-    const user = await User.findById(decoded.sub)
+    const decoded = verifySessionToken(token)
+    const [user, revoked] = await Promise.all([
+      User.findById(decoded.sub),
+      isSessionRevoked(decoded.jti),
+    ])
 
     if (!user || user.status !== 'active') {
       clearAuthCookie(res)
@@ -42,14 +46,25 @@ export async function requireAuth(req, res, next) {
       })
     }
 
+    if (
+      revoked ||
+      Number(user.tokenVersion || 0) !== decoded.ver
+    ) {
+      clearAuthCookie(res)
+
+      return res.status(401).json({
+        success: false,
+        code: 'SESSION_REVOKED',
+        message: 'Your session has been revoked. Please log in again.',
+      })
+    }
+
     req.user = user
+    req.session = decoded
+    req.csrfToken = decoded.csrf
     next()
   } catch (error) {
-    if (
-      error.name === 'JsonWebTokenError' ||
-      error.name === 'TokenExpiredError' ||
-      error.name === 'NotBeforeError'
-    ) {
+    if (isJwtError(error)) {
       clearAuthCookie(res)
 
       return res.status(401).json({

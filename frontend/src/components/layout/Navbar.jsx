@@ -61,7 +61,10 @@ export default function Navbar() {
   const initial = displayName.charAt(0).toUpperCase()
 
   async function handleLogout() {
-    await logout()
+    const loggedOut = await logout()
+
+    if (loggedOut === false) return
+
     setProfileOpen(false)
     setMenuOpen(false)
     navigate('/')

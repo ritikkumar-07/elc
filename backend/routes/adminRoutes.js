@@ -3,9 +3,13 @@ import { Router } from 'express'
 import mongoose from 'mongoose'
 import User from '../models/User.js'
 import { requireAuth, allowRoles } from '../middleware/authMiddleware.js'
+import { listAuditLogs } from '../controllers/auditController.js'
+import { recordAudit } from '../utils/audit.js'
 
 const router = Router()
 const adminOnly = [requireAuth, allowRoles('admin')]
+
+router.get('/audit-logs', ...adminOnly, listAuditLogs)
 
 // GET /api/v1/admin/registrations/pending
 router.get('/registrations/pending', ...adminOnly, async (req, res, next) => {
@@ -62,6 +66,13 @@ router.patch(
         })
       }
 
+      await recordAudit(req, {
+        action: 'registration.approved',
+        targetType: 'user',
+        targetId: user._id,
+        metadata: { role: user.role },
+      })
+
       return res.status(200).json({
         success: true,
         message: `${user.role === 'student' ? 'Student' : 'Teacher'} approved successfully.`,
@@ -106,6 +117,13 @@ router.patch(
           message: 'Pending student or teacher registration not found.',
         })
       }
+
+      await recordAudit(req, {
+        action: 'registration.rejected',
+        targetType: 'user',
+        targetId: user._id,
+        metadata: { role: user.role },
+      })
 
       return res.status(200).json({
         success: true,
@@ -170,6 +188,13 @@ router.patch(
           message: 'Pending teacher not found.',
         })
       }
+
+      await recordAudit(req, {
+        action: 'registration.approved',
+        targetType: 'user',
+        targetId: teacher._id,
+        metadata: { role: 'teacher' },
+      })
 
       return res.status(200).json({
         success: true,

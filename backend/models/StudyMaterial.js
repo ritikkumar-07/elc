@@ -51,6 +51,11 @@ const studyMaterialSchema = new mongoose.Schema(
       type: String,
       default: 'raw',
     },
+    cloudinaryDeliveryType: {
+      type: String,
+      enum: ['upload', 'authenticated'],
+      default: 'upload',
+    },
     cloudinaryUrl: {
       type: String,
       default: null,

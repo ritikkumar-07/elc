@@ -3,6 +3,8 @@ import { z } from 'zod'
 
 import Announcement from '../models/Announcement.js'
 import Class from '../models/Class.js'
+import { setPublicCache } from '../middleware/cacheMiddleware.js'
+import { recordAudit } from '../utils/audit.js'
 import {
   escapeRegex,
   invalidId,
@@ -86,13 +88,18 @@ function populateAnnouncement(query) {
     .populate('updatedBy', 'name role')
 }
 
-function publicVisibilityFilter() {
-  const now = new Date()
-
+export function publicVisibilityFilter(now = new Date()) {
   return {
     status: 'published',
     isPublic: true,
+    audience: 'all',
     $and: [
+      {
+        $or: [
+          { class: null },
+          { class: { $exists: false } },
+        ],
+      },
       {
         $or: [
           { publishAt: null },
@@ -215,10 +222,7 @@ export async function listPublicAnnouncements(req, res, next) {
       .select('title content publishAt createdAt')
       .lean()
 
-    res.set(
-      'Cache-Control',
-      'public, max-age=60, stale-while-revalidate=300',
-    )
+    setPublicCache(res)
 
     return res.status(200).json({
       success: true,
@@ -472,6 +476,18 @@ export async function createAnnouncement(req, res, next) {
       Announcement.findById(announcement._id),
     ).lean()
 
+    await recordAudit(req, {
+      action: 'announcement.created',
+      targetType: 'announcement',
+      targetId: announcement._id,
+      metadata: {
+        status: announcement.status,
+        audience: announcement.audience,
+        isPublic: announcement.isPublic,
+        classScoped: Boolean(announcement.class),
+      },
+    })
+
     return res.status(201).json({
       success: true,
       message: 'Announcement created successfully.',
@@ -599,6 +615,19 @@ export async function updateAnnouncement(req, res, next) {
     const updated = await populateAnnouncement(
       Announcement.findById(announcement._id),
     ).lean()
+
+    await recordAudit(req, {
+      action: 'announcement.updated',
+      targetType: 'announcement',
+      targetId: announcement._id,
+      metadata: {
+        status: announcement.status,
+        audience: announcement.audience,
+        isPublic: announcement.isPublic,
+        classScoped: Boolean(announcement.class),
+        fields: Object.keys(parsed.data),
+      },
+    })
 
     return res.status(200).json({
       success: true,

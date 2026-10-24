@@ -55,11 +55,19 @@ const photoOnly = multer({
 })
 
 export function isPdfBuffer(buffer) {
-  return (
-    Buffer.isBuffer(buffer) &&
-    buffer.length >= 5 &&
-    buffer.subarray(0, 5).toString('latin1') === '%PDF-'
-  )
+  if (
+    !Buffer.isBuffer(buffer) ||
+    buffer.length < 5 ||
+    buffer.subarray(0, 5).toString('latin1') !== '%PDF-'
+  ) {
+    return false
+  }
+
+  const tail = buffer
+    .subarray(Math.max(0, buffer.length - 2048))
+    .toString('latin1')
+
+  return tail.includes('%%EOF')
 }
 
 export function isImageBuffer(buffer) {
@@ -154,12 +162,25 @@ export async function uploadPdfToCloudinary(file) {
     const stream = cloudinary.uploader.upload_stream(
       {
         resource_type: 'raw',
+        type: 'authenticated',
+        access_mode: 'authenticated',
         public_id: publicId,
         overwrite: false,
         format: 'pdf',
       },
       (error, result) => {
         if (error) return reject(error)
+
+        if (
+          !result?.public_id ||
+          typeof result.secure_url !== 'string' ||
+          !result.secure_url.startsWith('https://')
+        ) {
+          return reject(
+            new Error('Cloudinary returned an invalid PDF asset.'),
+          )
+        }
+
         resolve(result)
       },
     )
@@ -219,12 +240,14 @@ export async function uploadTopperPhotoToCloudinary(file) {
 export async function removeUploadedFile(
   publicId,
   resourceType = 'raw',
+  deliveryType = 'upload',
 ) {
   if (!publicId) return
 
   try {
     await cloudinary.uploader.destroy(publicId, {
       resource_type: resourceType,
+      type: deliveryType,
       invalidate: true,
     })
   } catch (error) {
@@ -233,4 +256,48 @@ export async function removeUploadedFile(
       error.message,
     )
   }
+}
+
+export async function removeUploadedFileStrict(
+  publicId,
+  resourceType = 'raw',
+  deliveryType = 'upload',
+) {
+  if (!publicId) return { result: 'skipped' }
+
+  let result
+
+  try {
+    result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+      type: deliveryType,
+      invalidate: true,
+    })
+  } catch (error) {
+    console.error(
+      'Unable to remove Cloudinary asset:',
+      error.message,
+    )
+
+    const cleanupError = new Error(
+      'The media file could not be removed. The related record was not deleted. Please retry.',
+    )
+    cleanupError.status = 502
+    cleanupError.safeMessage =
+      'The media file could not be removed. The related record was not deleted. Please retry.'
+    cleanupError.cause = error
+    throw cleanupError
+  }
+
+  if (!['ok', 'not found'].includes(result?.result)) {
+    const cleanupError = new Error(
+      'The media file could not be removed. The related record was not deleted. Please retry.',
+    )
+    cleanupError.status = 502
+    cleanupError.safeMessage =
+      'The media file could not be removed. The related record was not deleted. Please retry.'
+    throw cleanupError
+  }
+
+  return result
 }

@@ -1,4 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useId, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, ArrowUpRight, X } from 'lucide-react'
 
 export const inputClass =
   'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500'
@@ -66,6 +68,193 @@ export function StatCard({ label, value, hint, icon = '▦' }) {
         </p>
       )}
     </article>
+  )
+}
+
+const compactStatTones = {
+  navy: {
+    card: 'border-slate-200 bg-white',
+    icon: 'bg-blue-50 text-[#19366e]',
+    label: 'text-slate-600',
+  },
+  indigo: {
+    card: 'border-indigo-100 bg-indigo-50/40',
+    icon: 'bg-indigo-100 text-indigo-700',
+    label: 'text-indigo-950/70',
+  },
+  teal: {
+    card: 'border-teal-100 bg-teal-50/40',
+    icon: 'bg-teal-100 text-teal-800',
+    label: 'text-teal-950/70',
+  },
+  amber: {
+    card: 'border-amber-200 bg-amber-50/50',
+    icon: 'bg-amber-100 text-amber-800',
+    label: 'text-amber-950/70',
+  },
+  rose: {
+    card: 'border-rose-100 bg-rose-50/40',
+    icon: 'bg-rose-100 text-rose-700',
+    label: 'text-rose-950/70',
+  },
+  slate: {
+    card: 'border-slate-200 bg-slate-50/70',
+    icon: 'bg-slate-200 text-slate-700',
+    label: 'text-slate-600',
+  },
+}
+
+export function CompactStatCard({
+  label,
+  value,
+  hint,
+  icon,
+  tone = 'navy',
+  to,
+  loading = false,
+  alert = false,
+}) {
+  const styles = compactStatTones[tone] || compactStatTones.navy
+  const Icon = icon && typeof icon !== 'string' ? icon : null
+
+  if (loading) {
+    return (
+      <div
+        className={`rounded-xl border p-3.5 ${styles.card}`}
+        aria-hidden="true"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-8 w-8 rounded-lg" />
+        </div>
+        <Skeleton className="mt-3 h-6 w-14" />
+        <Skeleton className="mt-2 h-3 w-32" />
+      </div>
+    )
+  }
+
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <p
+          className={`min-w-0 truncate text-xs font-semibold ${styles.label}`}
+        >
+          {label}
+        </p>
+        <span
+          className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${styles.icon}`}
+          aria-hidden="true"
+        >
+          {Icon ? <Icon className="h-4 w-4" /> : icon || '•'}
+        </span>
+      </div>
+
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <p className="text-2xl font-bold leading-none tracking-tight text-slate-950">
+          {value ?? '—'}
+        </p>
+        {to && (
+          <ArrowUpRight
+            className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:text-slate-700"
+            aria-hidden="true"
+          />
+        )}
+      </div>
+
+      {hint && (
+        <p className="mt-2 line-clamp-1 text-[11px] leading-4 text-slate-500">
+          {hint}
+        </p>
+      )}
+
+      {alert && (
+        <p className="mt-2 text-[11px] font-semibold text-amber-800">
+          Needs attention
+        </p>
+      )}
+    </>
+  )
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className={`group block rounded-xl border p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-100 ${styles.card}`}
+      >
+        {content}
+      </Link>
+    )
+  }
+
+  return (
+    <article
+      className={`rounded-xl border p-3.5 shadow-sm ${styles.card}`}
+    >
+      {content}
+    </article>
+  )
+}
+
+export function Skeleton({ className = 'h-4 w-full' }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`block animate-pulse rounded-md bg-slate-200/80 ${className}`}
+    />
+  )
+}
+
+export function Panel({
+  title,
+  description,
+  icon,
+  action,
+  children,
+  className = '',
+  bodyClassName = '',
+}) {
+  const Icon = icon && typeof icon !== 'string' ? icon : null
+  const headingId = `panel-${String(title || 'section')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')}`
+
+  return (
+    <section
+      className={`${cardClass} overflow-hidden ${className}`}
+      aria-labelledby={title ? headingId : undefined}
+    >
+      {(title || action) && (
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {Icon && (
+              <span
+                className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-600"
+                aria-hidden="true"
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+            )}
+            <div className="min-w-0">
+              {title && (
+                <h2
+                  id={headingId}
+                  className="text-sm font-bold text-slate-900"
+                >
+                  {title}
+                </h2>
+              )}
+              {description && (
+                <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                  {description}
+                </p>
+              )}
+            </div>
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
+        </div>
+      )}
+      <div className={bodyClassName}>{children}</div>
+    </section>
   )
 }
 
@@ -144,10 +333,12 @@ export function ErrorState({
 }
 
 export function EmptyState({ title, description, action, icon = '▤' }) {
+  const Icon = icon && typeof icon !== 'string' ? icon : null
+
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center sm:p-12">
       <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-2xl text-[#19366e]">
-        {icon}
+        {Icon ? <Icon className="h-6 w-6" aria-hidden="true" /> : icon}
       </div>
       <h3 className="mt-4 font-semibold text-slate-900">{title}</h3>
       {description && (
@@ -218,7 +409,160 @@ export function Modal({ open, title, description, onClose, children, wide = fals
   )
 }
 
-export function Notice({ tone = 'green', children }) {
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  tone = 'default',
+  busy = false,
+  onConfirm,
+  onCancel,
+  children,
+}) {
+  const titleId = useId()
+  const descriptionId = useId()
+  const panelRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    const panel = panelRef.current
+    document.body.style.overflow = 'hidden'
+
+    const focusTimer = window.setTimeout(() => {
+      const target = panel?.querySelector('[data-autofocus]')
+      target?.focus()
+    }, 0)
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !busy) {
+        event.preventDefault()
+        onCancel?.()
+        return
+      }
+
+      if (event.key !== 'Tab' || !panel) return
+
+      const focusable = [
+        ...panel.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ]
+
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      previousFocus?.focus?.()
+    }
+  }, [open, busy, onCancel])
+
+  if (!open) return null
+
+  const destructive = tone === 'danger'
+
+  return (
+    <div
+      className="fixed inset-0 z-[110] grid place-items-center overflow-y-auto bg-slate-950/55 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) {
+          onCancel?.()
+        }
+      }}
+    >
+      <section
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        aria-busy={busy}
+        className="my-auto w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+              destructive
+                ? 'bg-red-50 text-red-700'
+                : 'bg-blue-50 text-[#19366e]'
+            }`}
+            aria-hidden="true"
+          >
+            <AlertTriangle className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2
+              id={titleId}
+              className="text-lg font-bold tracking-tight text-slate-950"
+            >
+              {title}
+            </h2>
+            {description && (
+              <p
+                id={descriptionId}
+                className="mt-1.5 text-sm leading-6 text-slate-600"
+              >
+                {description}
+              </p>
+            )}
+            {children && <div className="mt-3">{children}</div>}
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            aria-label="Close dialog"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-50"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className={`${buttonSecondary} w-full sm:w-auto`}
+          >
+            {cancelLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            data-autofocus
+            className={`${destructive ? buttonDanger : buttonPrimary} w-full sm:w-auto`}
+          >
+            {busy ? 'Working...' : confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export function Notice({ tone = 'green', children, action }) {
   if (!children) return null
 
   const tones = {
@@ -231,9 +575,10 @@ export function Notice({ tone = 'green', children }) {
   return (
     <div
       role={tone === 'red' ? 'alert' : 'status'}
-      className={`rounded-xl border p-4 text-sm leading-6 ${tones[tone] || tones.green}`}
+      className={`flex flex-col gap-3 rounded-xl border p-3.5 text-sm leading-6 sm:flex-row sm:items-center sm:justify-between ${tones[tone] || tones.green}`}
     >
-      {children}
+      <div className="min-w-0">{children}</div>
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }

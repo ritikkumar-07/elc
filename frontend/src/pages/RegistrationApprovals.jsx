@@ -57,7 +57,10 @@ export default function RegistrationApprovals() {
   }, [admin, reloadKey])
 
   async function handleLogout() {
-    await logout()
+    const loggedOut = await logout()
+
+    if (loggedOut === false) return
+
     navigate('/login', { replace: true })
   }
 

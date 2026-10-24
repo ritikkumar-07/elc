@@ -1,5 +1,6 @@
 import Attendance from '../models/Attendance.js'
 import Announcement from '../models/Announcement.js'
+import AuditLog from '../models/AuditLog.js'
 import Class from '../models/Class.js'
 import Mark from '../models/Mark.js'
 import StudyMaterial from '../models/StudyMaterial.js'
@@ -87,6 +88,7 @@ async function adminDashboard() {
     recentRegistrations,
     upcomingTests,
     recentAnnouncements,
+    recentActivity,
   ] = await Promise.all([
     User.countDocuments({ role: 'student', status: 'active' }),
     User.countDocuments({ role: 'teacher', status: 'active' }),
@@ -128,6 +130,14 @@ async function adminDashboard() {
       .sort({ publishAt: -1, createdAt: -1 })
       .limit(5)
       .lean(),
+    AuditLog.find({})
+      .select(
+        'actor actorRole action targetType targetId outcome createdAt',
+      )
+      .populate('actor', 'name role')
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(6)
+      .lean(),
   ])
 
   return {
@@ -144,6 +154,22 @@ async function adminDashboard() {
     recentRegistrations,
     upcomingTests,
     recentAnnouncements,
+    recentActivity: recentActivity.map((entry) => ({
+      id: String(entry._id),
+      action: entry.action,
+      actorRole: entry.actorRole,
+      actor: entry.actor
+        ? {
+            id: String(entry.actor._id),
+            name: entry.actor.name,
+            role: entry.actor.role,
+          }
+        : null,
+      targetType: entry.targetType,
+      targetId: entry.targetId || null,
+      outcome: entry.outcome,
+      createdAt: entry.createdAt,
+    })),
   }
 }
 
@@ -281,6 +307,16 @@ async function studentDashboard(user) {
     }
   }
 
+  const publishedResults = await Test.find({
+    class: classId,
+    resultsPublishedAt: { $ne: null },
+  })
+    .select('_id')
+    .lean()
+  const publishedTestIds = publishedResults.map(
+    (test) => test._id,
+  )
+
   const [
     classInfo,
     materials,
@@ -340,6 +376,7 @@ async function studentDashboard(user) {
       .lean(),
     Mark.find({
       student: user._id,
+      test: { $in: publishedTestIds },
       status: 'published',
     })
         .populate(
@@ -394,6 +431,7 @@ async function studentDashboard(user) {
       {
         $match: {
           student: user._id,
+          test: { $in: publishedTestIds },
           status: 'published',
           $or: [
             { assessmentStatus: 'entered' },

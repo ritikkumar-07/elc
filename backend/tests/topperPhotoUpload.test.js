@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import express from 'express'
-import jwt from 'jsonwebtoken'
 
 import cloudinary from '../config/cloudinary.js'
+import RevokedSession from '../models/RevokedSession.js'
 import Topper from '../models/Topper.js'
 import User from '../models/User.js'
 import {
@@ -20,6 +20,7 @@ import topperRoutes, {
   selectPhotoUrl,
   updateSchema,
 } from '../routes/topperRoutes.js'
+import { createSessionToken } from '../utils/sessionToken.js'
 
 const jpegBytes = Buffer.from([
   0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
@@ -80,6 +81,43 @@ test('topper schemas accept URL-only JSON and multipart booleans', () => {
   assert.equal(updateResult.success, true)
   assert.equal(updateResult.data.isPublished, true)
   assert.equal(updateResult.data.photoUrl, undefined)
+})
+
+test('topper schemas reject non-HTTP photo URLs', () => {
+  const base = {
+    name: 'A Student',
+    className: '10',
+    board: 'CBSE',
+    session: '2025-26',
+    percentage: '95',
+  }
+
+  for (const photoUrl of [
+    'javascript:alert(1)',
+    'data:image/png;base64,AAAA',
+    '/relative/photo.jpg',
+    'not a url',
+  ]) {
+    assert.equal(
+      createSchema.safeParse({ ...base, photoUrl }).success,
+      false,
+    )
+    assert.equal(
+      updateSchema.safeParse({ photoUrl }).success,
+      false,
+    )
+  }
+
+  assert.equal(
+    createSchema.safeParse({ ...base, photoUrl: '' }).success,
+    true,
+  )
+  assert.equal(
+    updateSchema.safeParse({
+      photoUrl: 'https://example.com/photo.jpg',
+    }).success,
+    true,
+  )
 })
 
 test('selectPhotoUrl gives an uploaded file precedence over a URL', () => {
@@ -280,6 +318,15 @@ test('Cloudinary image upload rejects failures and insecure URLs', async () => {
 
 const adminId = '507f1f77bcf86cd799439011'
 const testJwtSecret = 'topper-photo-tests-secret-at-least-32-characters'
+const originalRevokedSessionExists = RevokedSession.exists
+
+test.before(() => {
+  RevokedSession.exists = async () => null
+})
+
+test.after(() => {
+  RevokedSession.exists = originalRevokedSessionExists
+})
 
 function authorizedTopperApp(token) {
   const app = express()
@@ -303,9 +350,10 @@ function authorizedTopperApp(token) {
 }
 
 function createAdminToken() {
-  return jwt.sign({ sub: adminId }, testJwtSecret, {
-    algorithm: 'HS256',
-  })
+  return createSessionToken(
+    { _id: adminId, tokenVersion: 0 },
+    testJwtSecret,
+  ).token
 }
 
 function createForm(values, photo = null) {
@@ -601,6 +649,7 @@ test('public topper route reads only published records without authentication', 
 test('authorized delete removes a topper and rejects malformed IDs', async () => {
   const originalSecret = process.env.JWT_SECRET
   const originalUserFindById = User.findById
+  const originalTopperFindById = Topper.findById
   const originalFindByIdAndDelete = Topper.findByIdAndDelete
   let deletedId = ''
   let server
@@ -612,6 +661,10 @@ test('authorized delete removes a topper and rejects malformed IDs', async () =>
       _id: adminId,
       role: 'admin',
       status: 'active',
+    })
+    Topper.findById = async (id) => ({
+      _id: id,
+      photoUrl: '',
     })
     Topper.findByIdAndDelete = async (id) => {
       deletedId = id
@@ -644,12 +697,83 @@ test('authorized delete removes a topper and rejects malformed IDs', async () =>
   } finally {
     if (server) await close(server)
     User.findById = originalUserFindById
+    Topper.findById = originalTopperFindById
     Topper.findByIdAndDelete = originalFindByIdAndDelete
 
     if (originalSecret === undefined) {
       delete process.env.JWT_SECRET
     } else {
       process.env.JWT_SECRET = originalSecret
+    }
+  }
+})
+
+test('delete reports failure and keeps the record when photo cleanup fails', async () => {
+  const originalSecret = process.env.JWT_SECRET
+  const originalCloudName = process.env.CLOUDINARY_CLOUD_NAME
+  const originalUserFindById = User.findById
+  const originalTopperFindById = Topper.findById
+  const originalTopperExists = Topper.exists
+  const originalFindByIdAndDelete = Topper.findByIdAndDelete
+  const originalDestroy = cloudinary.uploader.destroy
+  let deleted = false
+  let server
+
+  process.env.JWT_SECRET = testJwtSecret
+  process.env.CLOUDINARY_CLOUD_NAME = 'elc'
+
+  try {
+    User.findById = async () => ({
+      _id: adminId,
+      role: 'admin',
+      status: 'active',
+    })
+    Topper.findById = async (id) => ({
+      _id: id,
+      photoUrl:
+        'https://res.cloudinary.com/elc/image/upload/v1/elc-toppers/photo.jpg',
+    })
+    Topper.exists = async () => null
+    Topper.findByIdAndDelete = async (id) => {
+      deleted = true
+      return { _id: id }
+    }
+    cloudinary.uploader.destroy = async () => {
+      throw new Error('Cloudinary unavailable')
+    }
+
+    const app = authorizedTopperApp(createAdminToken())
+    const listening = await listen(app)
+    server = listening.server
+
+    const response = await fetch(
+      `${listening.baseUrl}/api/v1/toppers/${adminId}`,
+      { method: 'DELETE' },
+    )
+    const result = await response.json()
+
+    assert.equal(response.status, 502)
+    assert.equal(result.success, false)
+    assert.match(result.message, /could not be removed/)
+    assert.equal(deleted, false)
+  } finally {
+    if (server) await close(server)
+    User.findById = originalUserFindById
+    Topper.findById = originalTopperFindById
+    Topper.exists = originalTopperExists
+    Topper.findByIdAndDelete = originalFindByIdAndDelete
+    cloudinary.uploader.destroy = originalDestroy
+
+    if (originalSecret === undefined) {
+      delete process.env.JWT_SECRET
+    } else {
+      process.env.JWT_SECRET = originalSecret
+    }
+
+    if (originalCloudName === undefined) {
+      delete process.env.CLOUDINARY_CLOUD_NAME
+    } else {
+      process.env.CLOUDINARY_CLOUD_NAME = originalCloudName
     }
   }
 })

@@ -66,7 +66,13 @@ export default function LoginForm() {
       const actualRole = authenticatedUser.role
 
       if (actualRole !== role) {
-        await logout()
+        const loggedOut = await logout()
+
+        if (loggedOut === false) {
+          throw new Error(
+            'Unable to sign out of the mismatched account. Please reload and try again.',
+          )
+        }
 
         throw new Error(
           `This account is registered as ${

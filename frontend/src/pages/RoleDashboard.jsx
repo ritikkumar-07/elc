@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../components/dashboard/DashboardLayout.jsx'
 import HeroBannerManager from '../components/dashboard/HeroBannerManager.jsx'
 import Hero from '../components/home/Hero.jsx'
-import { apiRequest } from '../lib/api.js'
+import { apiRequest, setCsrfToken } from '../lib/api.js'
 
 const roleConfig = {
   admin: {
@@ -260,6 +260,8 @@ export default function RoleDashboard({ expectedRole, section }) {
           throw new Error('This account has an unsupported role.')
         }
 
+        setCsrfToken(result.csrfToken)
+
         if (result.user.role !== expectedRole) {
           const paths = {
             admin: '/admin',
@@ -299,12 +301,17 @@ export default function RoleDashboard({ expectedRole, section }) {
         method: 'POST',
         skipAuthEvent: true,
       })
-    } catch {
-      // Navigate away even if the backend is temporarily unavailable.
-    } finally {
-      setUser(null)
-      navigate('/login', { replace: true })
+    } catch (err) {
+      setError(
+        err.message ||
+          'Logout could not be confirmed. Please try again.',
+      )
+      return
     }
+
+    setCsrfToken('')
+    setUser(null)
+    navigate('/login', { replace: true })
   }
 
   if (loading && !user) return <LoadingScreen />
