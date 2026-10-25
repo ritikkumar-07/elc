@@ -264,7 +264,7 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
                 ))}
               </div>
 
-              {!reduceMotion && (
+              {/* {!reduceMotion && (
                 <button
                   type="button"
                   onClick={() => setManualPaused((paused) => !paused)}
@@ -273,7 +273,7 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
                 >
                   {manualPaused ? 'Play slides' : 'Pause slides'}
                 </button>
-              )}
+              )} */}
 
               {/* Manual controls */}
               {/* <div className="ml-auto flex gap-2">
@@ -297,9 +297,9 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
               </div> */}
             </div>
 
-            <p className="sr-only" aria-live="off">
+            {/* <p className="sr-only" aria-live="off">
               {autoRotatePaused ? 'Automatic slide rotation paused.' : 'Automatic slide rotation enabled.'}
-            </p>
+            </p> */}
           </div>
         </div>
 
