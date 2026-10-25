@@ -7,7 +7,9 @@ process.env.FRONTEND_URL = 'https://elc-eta.vercel.app'
 process.env.JWT_SECRET =
   'http-endpoint-test-secret-that-is-long-enough'
 
-const { app } = await import('../server.js')
+const { app, default: defaultExport } = await import('../server.js')
+
+assert.equal(defaultExport, app)
 
 const server = http.createServer(app)
 await new Promise((resolve) =>

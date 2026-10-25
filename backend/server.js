@@ -216,23 +216,39 @@ function redactErrorMessage(message) {
     )
 }
 
+async function connectDatabase() {
+  const environment = validateEnvironment()
+
+  if (!environment.hasDatabaseName) {
+    console.warn(
+      'MONGODB_URI has no database name. MongoDB will use its default "test" database; add /<database> to the URI to make this explicit.',
+    )
+  }
+
+  await mongoose.connect(process.env.MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+  })
+
+  console.log('MongoDB connected successfully.')
+  console.log(`Database: ${mongoose.connection.name}`)
+}
+
+function logStartupFailure(error) {
+  const message = redactErrorMessage(error.message)
+
+  console.error('Backend startup failed:', message)
+
+  if (/querySrv|ECONNREFUSED|ENOTFOUND|ETIMEOUT/i.test(message)) {
+    console.error(
+      'MongoDB DNS or network access failed. Check DNS, internet connectivity, and Atlas Network Access, then retry.',
+    )
+  }
+}
+
 // Start after MongoDB connects
 async function startServer() {
   try {
-    const environment = validateEnvironment()
-
-    if (!environment.hasDatabaseName) {
-      console.warn(
-        'MONGODB_URI has no database name. MongoDB will use its default "test" database; add /<database> to the URI to make this explicit.',
-      )
-    }
-
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 10000,
-    })
-
-    console.log('MongoDB connected successfully.')
-    console.log(`Database: ${mongoose.connection.name}`)
+    await connectDatabase()
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`ELC backend running on port ${PORT}`)
@@ -241,22 +257,26 @@ async function startServer() {
       )
     })
   } catch (error) {
-    const message = redactErrorMessage(error.message)
-
-    console.error('Backend startup failed:', message)
-
-    if (/querySrv|ECONNREFUSED|ENOTFOUND|ETIMEOUT/i.test(message)) {
-      console.error(
-        'MongoDB DNS or network access failed. Check DNS, internet connectivity, and Atlas Network Access, then retry.',
-      )
-    }
-
+    logStartupFailure(error)
     process.exit(1)
   }
 }
 
-if (process.env.NODE_ENV !== 'test') {
-  startServer()
+async function startServerless() {
+  try {
+    await connectDatabase()
+  } catch (error) {
+    logStartupFailure(error)
+  }
 }
 
+if (process.env.NODE_ENV !== 'test') {
+  if (process.env.VERCEL) {
+    void startServerless()
+  } else {
+    void startServer()
+  }
+}
+
+export default app
 export { app }
