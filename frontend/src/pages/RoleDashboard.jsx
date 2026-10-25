@@ -132,13 +132,13 @@ function MetricCard({ icon, label, description }) {
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-50 text-lg text-blue-900 ring-1 ring-slate-200">
           {icon}
         </span>
-        <span className="text-2xl font-semibold tracking-tight text-slate-400">
+        <span className="text-2xl font-semibold tracking-tight text-slate-500">
           —
         </span>
       </div>
       <h3 className="mt-4 text-sm font-bold text-slate-900">{label}</h3>
       <p className="mt-1.5 text-xs leading-5 text-slate-500">{description}</p>
-      <p className="mt-3 text-[10px] font-medium text-slate-400">
+      <p className="mt-3 text-[10px] font-medium text-slate-500">
         Awaiting data connection
       </p>
     </article>
@@ -422,7 +422,7 @@ export default function RoleDashboard({ expectedRole, section }) {
           </div>
 
           <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               TODAY
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-800">{date}</p>

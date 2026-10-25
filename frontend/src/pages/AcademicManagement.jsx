@@ -464,6 +464,8 @@ export default function AcademicManagement() {
         onClose={() => !saving && setClassModal(false)}
       >
         <form onSubmit={saveClass} className="space-y-4">
+          {error && <Notice tone="red">{error}</Notice>}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-slate-700">
               Class name *
@@ -569,6 +571,8 @@ export default function AcademicManagement() {
           </Notice>
         ) : (
           <form onSubmit={saveSubject} className="space-y-4">
+            {error && <Notice tone="red">{error}</Notice>}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-slate-700">
                 Subject name *

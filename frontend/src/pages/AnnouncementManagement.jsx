@@ -364,6 +364,8 @@ export default function AnnouncementManagement() {
         wide
       >
         <form onSubmit={saveAnnouncement} className="space-y-4">
+          {error && <Notice tone="red">{error}</Notice>}
+
           <label className="block text-sm font-semibold text-slate-700">
             Title *
             <input

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import SectionHeading from '../common/SectionHeading.jsx'
+import { buildImageSrcSet, optimizedImageUrl } from '../../lib/imageUrl.js'
 
 export default function About() {
   return (
@@ -8,10 +9,21 @@ export default function About() {
       <div className="mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-2">
         <div>
           <img
-            src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=85"
+            src={optimizedImageUrl(
+              'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=85',
+              { width: 1200, quality: 78 },
+            )}
+            srcSet={buildImageSrcSet(
+              'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=85',
+              [640, 960, 1200, 1600],
+            )}
+            sizes="(min-width: 768px) 50vw, 100vw"
+            width="1200"
+            height="800"
             alt="Students studying together"
             className="h-80 w-full rounded-3xl object-cover shadow-lg sm:h-96"
             loading="lazy"
+            decoding="async"
           />
         </div>
 

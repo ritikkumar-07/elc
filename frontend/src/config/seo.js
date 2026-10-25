@@ -1,8 +1,9 @@
 import courses from '../data/courses.js'
 import { institute } from './institute.js'
-import { normalizeSiteUrl } from './siteUrl.js'
+import { LEGAL_PATHS } from './legal.js'
+import { normalizeSiteUrl, resolveSiteUrl } from './siteUrl.js'
 
-export { normalizeSiteUrl }
+export { normalizeSiteUrl, resolveSiteUrl }
 
 const HOME_TITLE =
   'Expert Learning Center | Quality Coaching in Mirganj, Gopalganj'
@@ -65,14 +66,30 @@ function privateSeo(title, description) {
   }
 }
 
+const privacySeo = {
+  title: 'Privacy Policy | Expert Learning Center',
+  description:
+    'Read how Expert Learning Center handles account, student, academic, security, and optional analytics information on its website and portal.',
+  robots: 'index, follow',
+  canonicalPath: LEGAL_PATHS.privacy,
+}
+
+const termsSeo = {
+  title: 'Terms & Conditions | Expert Learning Center',
+  description:
+    'Read the terms for using the Expert Learning Center website and student and staff portal, including account, content, and acceptable-use rules.',
+  robots: 'index, follow',
+  canonicalPath: LEGAL_PATHS.terms,
+}
+
 const notFoundSeo = privateSeo(
   'Page Not Found | Expert Learning Center',
   'The requested page could not be found on the Expert Learning Center website.',
 )
 
-export const siteUrl = normalizeSiteUrl(
-  import.meta.env?.VITE_SITE_URL,
-)
+export const siteUrl = resolveSiteUrl(import.meta.env, {
+  allowVercelFallback: true,
+})
 
 export function absoluteUrl(pathname) {
   if (!siteUrl) return ''
@@ -112,6 +129,14 @@ export function getPageSeo(pathname = '/', hash = '') {
 
   if (normalizedPath === '/contact') {
     return contactSeo
+  }
+
+  if (normalizedPath === LEGAL_PATHS.privacy) {
+    return privacySeo
+  }
+
+  if (normalizedPath === LEGAL_PATHS.terms) {
+    return termsSeo
   }
 
   if (normalizedPath === '/login') {
@@ -162,6 +187,8 @@ export function getPageSeo(pathname = '/', hash = '') {
 export const pageSeoDefaults = {
   home: homeSeo,
   contact: contactSeo,
+  privacy: privacySeo,
+  terms: termsSeo,
   sections: sectionSeo,
   notFound: notFoundSeo,
   siteName: institute.name,

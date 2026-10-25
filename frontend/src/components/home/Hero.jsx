@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { apiRequest } from '../../lib/api.js'
+import { trackEvent } from '../../lib/analytics.js'
+import { buildImageSrcSet, optimizedImageUrl } from '../../lib/imageUrl.js'
 
 const defaultSlides = [
   {
@@ -11,7 +13,7 @@ const defaultSlides = [
     description:
       'Stay connected with your institute and access student services through the ELC portal.',
     image:
-      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=2000&q=90',
+      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1800&q=75',
     alt: 'Student studying and working on educational materials',
   },
   {
@@ -20,7 +22,7 @@ const defaultSlides = [
     description:
       'Strengthen your academic foundations through focused learning, regular practice, and guidance.',
     image:
-      'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=2000&q=90',
+      'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1800&q=75',
     alt: 'Students learning together in a classroom',
   },
   {
@@ -29,7 +31,7 @@ const defaultSlides = [
     description:
       'Discover learning resources, academic updates, and support for your educational journey.',
     image:
-      'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=2000&q=90',
+      'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&w=1800&q=75',
     alt: 'Students studying in an educational environment',
   },
 ]
@@ -57,6 +59,7 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
   const [slides, setSlides] = useState(defaultSlides)
   const [activeIndex, setActiveIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
+  const [manualPaused, setManualPaused] = useState(false)
   const [reduceMotion, setReduceMotion] = useState(false)
 
   useEffect(() => {
@@ -109,17 +112,17 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
   }, [])
 
   const slide = slides[activeIndex] || slides[0]
+  const autoRotatePaused = isPaused || manualPaused
 
-  // Automatically change slides every 5 seconds.
   useEffect(() => {
-    if (isPaused || reduceMotion) return undefined
+    if (autoRotatePaused || reduceMotion) return undefined
 
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % slides.length)
     }, 5000)
 
     return () => window.clearInterval(timer)
-  }, [isPaused, reduceMotion, slides.length])
+  }, [autoRotatePaused, reduceMotion, slides.length])
 
   const previousSlide = () => {
     setActiveIndex(
@@ -149,9 +152,12 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
         {/* Full-width background photograph */}
         <img
           key={slide.image}
-          src={slide.image}
+          src={optimizedImageUrl(slide.image, { width: 1920, quality: 78 })}
+          srcSet={buildImageSrcSet(slide.image, [768, 1280, 1920, 2400])}
+          sizes="100vw"
           alt={slide.alt}
           fetchPriority="high"
+          decoding="async"
           className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
         />
 
@@ -180,14 +186,24 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
               {isPublic ? (
                 <>
                   <Link
-                    to="/login"
+                    to="/contact"
+                    onClick={() =>
+                      trackEvent('CTA: Admission Enquiry', {
+                        location: 'hero',
+                      })
+                    }
                     className="inline-flex min-h-12 items-center justify-center gap-3 rounded-lg bg-[#12315f] px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#0c2347] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
                   >
-                    Student Portal <span aria-hidden="true">→</span>
+                    Admission Enquiry <span aria-hidden="true">→</span>
                   </Link>
 
                   <Link
                     to="/login"
+                    onClick={() =>
+                      trackEvent('CTA: Portal Login', {
+                        location: 'hero',
+                      })
+                    }
                     className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#9aacc7] bg-white/90 px-5 py-3 text-sm font-semibold text-[#12315f] transition-colors hover:border-[#12315f] hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
                   >
                     Student &amp; Staff Login
@@ -224,22 +240,40 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
                 {String(slides.length).padStart(2, '0')}
               </span>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {slides.map((item, index) => (
                   <button
-                    key={item.eyebrow}
+                    key={`${item.eyebrow}-${index}`}
                     type="button"
                     onClick={() => setActiveIndex(index)}
                     aria-label={`Show slide ${index + 1}`}
                     aria-pressed={activeIndex === index}
-                    className={`h-2.5 rounded-full transition-[width,background-color] duration-200 ${
-                      activeIndex === index
-                        ? 'w-9 bg-[#12315f]'
-                        : 'w-2.5 bg-slate-400/70 hover:bg-slate-600'
+                    className={`flex h-6 items-center justify-center rounded-full transition-[width] duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2 ${
+                      activeIndex === index ? 'w-10' : 'w-6'
                     }`}
-                  />
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`block h-2.5 rounded-full transition-[width,background-color] duration-200 ${
+                        activeIndex === index
+                          ? 'w-9 bg-[#12315f]'
+                          : 'w-2.5 bg-slate-500 hover:bg-slate-700'
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
+
+              {!reduceMotion && (
+                <button
+                  type="button"
+                  onClick={() => setManualPaused((paused) => !paused)}
+                  aria-pressed={manualPaused}
+                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#9aacc7] bg-white/80 px-3 py-1.5 text-xs font-semibold text-[#12315f] transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] focus-visible:ring-offset-2"
+                >
+                  {manualPaused ? 'Play slides' : 'Pause slides'}
+                </button>
+              )}
 
               {/* Manual controls */}
               {/* <div className="ml-auto flex gap-2">
@@ -264,7 +298,7 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
             </div>
 
             <p className="sr-only" aria-live="off">
-              {isPaused ? 'Automatic slide rotation paused.' : 'Automatic slide rotation enabled.'}
+              {autoRotatePaused ? 'Automatic slide rotation paused.' : 'Automatic slide rotation enabled.'}
             </p>
           </div>
         </div>
@@ -274,7 +308,7 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
           type="button"
           onClick={previousSlide}
           aria-label="Previous slide"
-          className="absolute left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-2xl text-[#12315f] shadow-md transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] md:flex lg:left-4"
+          className="absolute left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-2xl text-[#12315f] shadow-md transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] xl:flex xl:left-4"
         >
           ‹
         </button>
@@ -283,7 +317,7 @@ export default function Hero({ variant = 'public', canManageBanners = false }) {
           type="button"
           onClick={nextSlide}
           aria-label="Next slide"
-          className="absolute right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-2xl text-[#12315f] shadow-md transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] md:flex lg:right-4"
+          className="absolute right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-2xl text-[#12315f] shadow-md transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#12315f] xl:flex xl:right-4"
         >
           ›
         </button>

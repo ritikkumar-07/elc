@@ -72,7 +72,7 @@ export default function AttendanceSummary({
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-slate-100 pt-2.5 text-[11px]">
         <p className="flex min-w-0 items-center gap-1.5 text-slate-500">
           <ShieldCheck
-            className="h-3.5 w-3.5 shrink-0 text-slate-400"
+            className="h-3.5 w-3.5 shrink-0 text-slate-500"
             aria-hidden="true"
           />
           <span className="truncate">

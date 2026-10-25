@@ -35,8 +35,20 @@ const signupLimiter = rateLimit({
   },
 })
 
-// Limit failed attempts per source and account so credential stuffing
-// cannot spread across many email addresses from one address.
+// Limit failed attempts per source before they reach the per-account limiter.
+const loginIpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: {
+    success: false,
+    message: 'Too many login attempts. Please try again later.',
+  },
+})
+
+// Limit failed attempts per source and account as a second layer.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -51,7 +63,7 @@ const loginLimiter = rateLimit({
 })
 
 router.post('/signup', signupLimiter, signup)
-router.post('/login', loginLimiter, login)
+router.post('/login', loginIpLimiter, loginLimiter, login)
 router.post('/logout', logout)
 router.get('/me', requireAuth, getMe)
 router.post('/change-password', requireAuth, changePassword)

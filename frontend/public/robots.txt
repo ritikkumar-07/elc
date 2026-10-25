@@ -12,3 +12,6 @@ Disallow: /register
 Disallow: /demo
 Disallow: /demo/
 Disallow: /api/
+
+# A Sitemap: line is added automatically at build time when VITE_SITE_URL is configured,
+# or when VERCEL_PROJECT_PRODUCTION_URL is available during a Vercel production build.

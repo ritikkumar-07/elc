@@ -707,6 +707,8 @@ export default function TestManagement() {
         wide
       >
         <form onSubmit={saveTest} className="space-y-4">
+          {error && <Notice tone="red">{error}</Notice>}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-semibold text-slate-700 sm:col-span-2">
               Test title *

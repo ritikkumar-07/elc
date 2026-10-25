@@ -1403,7 +1403,7 @@ function StaffAttendanceView({ user, logout }) {
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
                         <ClipboardList
-                          className="h-3.5 w-3.5 text-slate-400"
+                          className="h-3.5 w-3.5 text-slate-500"
                           aria-hidden="true"
                         />
                         <span className="truncate">

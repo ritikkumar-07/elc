@@ -70,12 +70,22 @@ export default function TopperCarousel({ toppers }) {
     }
   }, [toppers.length, updateControls])
 
+  function handleTrackKeyDown(event) {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      scrollByCard(-1)
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      scrollByCard(1)
+    }
+  }
+
   function scrollByCard(direction) {
     const track = trackRef.current
 
     if (!track) return
 
-    const firstSlide = track.firstElementChild
+    const firstSlide = track.querySelector('[data-topper-slide]')
     const gap =
       Number.parseFloat(window.getComputedStyle(track).columnGap) || 24
     const cardWidth = firstSlide?.getBoundingClientRect().width
@@ -111,12 +121,17 @@ export default function TopperCarousel({ toppers }) {
           id="topper-carousel-track"
           ref={trackRef}
           onScroll={updateControls}
+          onKeyDown={handleTrackKeyDown}
           tabIndex={0}
           role="region"
           aria-roledescription="carousel"
           aria-label="Published star performers"
           className="flex min-w-0 flex-1 snap-x snap-mandatory gap-6 overflow-x-auto overscroll-x-contain py-1 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
+          <span className="sr-only">
+            Use the left and right arrow keys or the carousel buttons to move
+            between student achievements.
+          </span>
           {toppers.map((topper, index) => (
             <div
               key={topper.id}

@@ -1,6 +1,6 @@
 // Public site content release date in YYYY-MM-DD format. Update this only when
 // a meaningful website/content release is made, not on every deployment.
-export const SITE_LAST_UPDATED = '2026-10-21'
+export const SITE_LAST_UPDATED = '2026-10-25'
 
 const MONTH_NAMES = [
   'January',
@@ -46,7 +46,7 @@ export const institute = {
   shortName: 'ELC',
   tagline: 'Learn Today. Lead Tomorrow.',
   director: {
-    name: 'Mr. Director',
+    name: 'Institute Director',
     designation: 'Director',
   },
   phone: {

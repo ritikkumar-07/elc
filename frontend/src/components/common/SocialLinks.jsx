@@ -40,7 +40,7 @@ const platformIcons = {
 }
 
 export default function SocialLinks({ className = '' }) {
-  const hasVerifiedProfiles = institute.socialProfiles.some(
+  const verifiedProfiles = institute.socialProfiles.filter(
     (profile) => profile.isVerified,
   )
 
@@ -50,45 +50,47 @@ export default function SocialLinks({ className = '' }) {
         Social Media
       </h2>
 
-      <ul
-        aria-label="Social media links"
-        className="mt-4 flex flex-wrap gap-2.5"
-      >
-        {institute.socialProfiles.map((profile) => {
-          const Icon = platformIcons[profile.platform]
-          if (!Icon) return null
+      {verifiedProfiles.length > 0 ? (
+        <>
+          <ul
+            aria-label="Social media links"
+            className="mt-4 flex flex-wrap gap-2.5"
+          >
+            {verifiedProfiles.map((profile) => {
+              const Icon = platformIcons[profile.platform]
+              if (!Icon) return null
 
-          const profileType = profile.isVerified
-            ? 'ELC profile'
-            : 'general platform link'
+              return (
+                <li key={profile.platform}>
+                  <a
+                    href={profile.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${profile.platform}, ELC profile (opens in a new tab)`}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-300 transition-colors hover:border-[#e6b34a]/60 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1c36]"
+                  >
+                    <Icon
+                      width="20"
+                      height="20"
+                      aria-hidden="true"
+                      focusable="false"
+                    />
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
 
-          return (
-            <li key={profile.platform}>
-              <a
-                href={profile.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`${profile.platform}, ${profileType} (opens in a new tab)`}
-                title={`${profile.platform} (${profileType})`}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-300 transition-colors hover:border-[#e6b34a]/60 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1c36]"
-              >
-                <Icon
-                  width="20"
-                  height="20"
-                  aria-hidden="true"
-                  focusable="false"
-                />
-              </a>
-            </li>
-          )
-        })}
-      </ul>
-
-      <p className="mt-3 max-w-xs text-xs leading-5 text-slate-400">
-        {hasVerifiedProfiles
-          ? 'Follow Expert Learning Center for updates.'
-          : 'General platform links. Official ELC profiles will be added when available.'}
-      </p>
+          <p className="mt-3 max-w-xs text-xs leading-5 text-slate-400">
+            Follow Expert Learning Center for updates.
+          </p>
+        </>
+      ) : (
+        <p className="mt-4 max-w-xs text-xs leading-5 text-slate-400">
+          Official social profiles are being verified and will be added here
+          once confirmed.
+        </p>
+      )}
     </div>
   )
 }

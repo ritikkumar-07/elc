@@ -1,6 +1,8 @@
 
 import { Link } from 'react-router-dom'
+
 import LoginForm from '../components/auth/LoginForm.jsx'
+import { LEGAL_PATHS } from '../config/legal.js'
 
 const highlights = [
   {
@@ -22,8 +24,13 @@ const highlights = [
 
 export default function Login() {
   return (
-    <main className="min-h-screen bg-[#f4f6fb] text-slate-900">
-      <div className="grid min-h-screen lg:grid-cols-[1.02fr_0.98fr]">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-[#f4f6fb] text-slate-900"
+    >
+      <h1 className="sr-only">Sign in to Expert Learning Center</h1>
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.02fr_0.98fr]">
         {/* Branding panel */}
         <section className="relative isolate hidden overflow-hidden bg-[#101d3a] px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between xl:px-16 xl:py-14">
           <div
@@ -59,13 +66,13 @@ export default function Login() {
               YOUR ACADEMIC JOURNEY STARTS HERE
             </div>
 
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight xl:text-6xl">
+            <p className="text-4xl font-bold leading-[1.15] tracking-tight xl:text-6xl">
               Build your
               <span className="block text-blue-300">
                 future with
               </span>
               confidence.
-            </h1>
+            </p>
 
             <p className="mt-6 max-w-md text-base leading-8 text-slate-300">
               One place for learning resources, academic updates,
@@ -156,8 +163,16 @@ export default function Login() {
             </p>
           </div>
 
-          <footer className="border-t border-slate-100 pt-5 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} Expert Learning Center
+          <footer className="border-t border-slate-100 pt-5 text-center text-xs text-slate-500">
+            <p>© {new Date().getFullYear()} Expert Learning Center</p>
+            <p className="mt-1.5 flex items-center justify-center gap-4">
+              <Link className="rounded font-semibold text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e]" to={LEGAL_PATHS.privacy}>
+                Privacy Policy
+              </Link>
+              <Link className="rounded font-semibold text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e]" to={LEGAL_PATHS.terms}>
+                Terms &amp; Conditions
+              </Link>
+            </p>
           </footer>
         </section>
       </div>

@@ -2,7 +2,9 @@ import { Link, useParams } from 'react-router-dom'
 
 import Footer from '../components/layout/Footer.jsx'
 import Navbar from '../components/layout/Navbar.jsx'
+import { institute } from '../config/institute.js'
 import courses from '../data/courses.js'
+import { trackEvent } from '../lib/analytics.js'
 
 export default function CourseDetails() {
   const { courseId } = useParams()
@@ -13,7 +15,11 @@ export default function CourseDetails() {
       <div className="flex min-h-screen flex-col bg-white">
         <Navbar />
 
-        <main className="flex flex-1 items-center justify-center bg-slate-50 px-5 py-20">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex flex-1 items-center justify-center bg-slate-50 px-5 py-20"
+        >
           <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-xs font-bold uppercase tracking-widest text-[#19366e]">
               Courses
@@ -43,7 +49,7 @@ export default function CourseDetails() {
     <div className="flex min-h-screen flex-col bg-white">
       <Navbar />
 
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} className="flex-1">
         <section className="border-b border-slate-200 bg-[#f4f6fb] px-5 py-14 sm:py-16">
           <div className="mx-auto max-w-6xl">
             <Link
@@ -120,15 +126,41 @@ export default function CourseDetails() {
               </p>
 
               <Link
+                to="/contact"
+                onClick={() =>
+                  trackEvent('CTA: Admission Enquiry', {
+                    location: 'course',
+                    course: course.id,
+                  })
+                }
+                className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#19366e] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#122951] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
+              >
+                Admission enquiry
+              </Link>
+
+              <a
+                href={institute.phone.href}
+                onClick={() =>
+                  trackEvent('CTA: Call', {
+                    location: 'course',
+                    course: course.id,
+                  })
+                }
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[#9aacc7] bg-white px-5 py-3 text-sm font-semibold text-[#19366e] transition hover:border-[#19366e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
+              >
+                Call {institute.phone.display}
+              </a>
+
+              <Link
                 to="/#courses"
-                className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[#19366e] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#122951]"
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[#9aacc7] bg-white px-5 py-3 text-sm font-semibold text-[#19366e] transition hover:border-[#19366e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
               >
                 Browse all courses
               </Link>
 
               <Link
                 to="/login"
-                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[#9aacc7] bg-white px-5 py-3 text-sm font-semibold text-[#19366e] transition hover:border-[#19366e]"
+                className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[#9aacc7] bg-white px-5 py-3 text-sm font-semibold text-[#19366e] transition hover:border-[#19366e] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
               >
                 Student &amp; Staff Login
               </Link>

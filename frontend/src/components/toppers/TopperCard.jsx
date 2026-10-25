@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { buildImageSrcSet, optimizedImageUrl } from '../../lib/imageUrl.js'
+
 export default function TopperCard({ topper }) {
   const {
     name,
@@ -19,8 +21,10 @@ export default function TopperCard({ topper }) {
       <div className="relative aspect-[4/3] shrink-0 overflow-hidden bg-slate-100">
         {showPhoto ? (
           <img
-            src={photoSource}
-            alt={`Photo of ${name}`}
+            src={optimizedImageUrl(photoSource, { width: 640, quality: 78 })}
+            srcSet={buildImageSrcSet(photoSource, [320, 480, 640, 960])}
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 88vw"
+            alt={`Portrait of ${name}`}
             loading="lazy"
             decoding="async"
             className="h-full w-full object-cover object-center transition duration-500 group-hover:scale-105 motion-reduce:transform-none"
@@ -75,7 +79,7 @@ export default function TopperCard({ topper }) {
         </p>
 
         <div className="mt-auto border-t border-slate-100 pt-3">
-          <p className="text-xs font-semibold tracking-wide text-slate-400">
+          <p className="text-xs font-semibold tracking-wide text-slate-500">
             EXPERT LEARNING CENTER
           </p>
         </div>

@@ -1,4 +1,4 @@
-import { ArrowRight, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
+import { ArrowRight, Mail, MapPin, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import {
@@ -7,6 +7,9 @@ import {
   institute,
 } from '../../config/institute.js'
 import courses from '../../data/courses.js'
+import { LEGAL_PATHS } from '../../config/legal.js'
+import { openCookiePreferences } from '../../lib/consent.js'
+import { trackEvent } from '../../lib/analytics.js'
 import SocialLinks from '../common/SocialLinks.jsx'
 
 const quickLinks = [
@@ -20,6 +23,9 @@ const quickLinks = [
 
 const linkClass =
   'inline-flex min-h-7 items-center rounded text-slate-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
+
+const legalLinkClass =
+  'inline-flex min-h-7 items-center rounded text-xs text-slate-400 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
 
 export default function Footer() {
   const lastUpdated = formatSiteLastUpdated(SITE_LAST_UPDATED)
@@ -151,6 +157,9 @@ export default function Footer() {
 
           <Link
             to="/login"
+            onClick={() =>
+              trackEvent('CTA: Portal Login', { location: 'footer' })
+            }
             className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-semibold text-[#19366e] transition-colors hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1c36]"
           >
             Student &amp; Staff Portal
@@ -158,31 +167,54 @@ export default function Footer() {
           </Link>
 
           <a
-            href={institute.whatsapp.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${institute.whatsapp.label} (opens WhatsApp in a new tab)`}
+            href={institute.admissionEnquiry.href}
+            onClick={() =>
+              trackEvent('CTA: Admission Enquiry', {
+                location: 'footer',
+              })
+            }
             className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#e6b34a] px-5 py-3 text-center text-sm font-bold text-[#102d59] transition-colors hover:bg-[#f0c466] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d1c36]"
           >
-            <MessageCircle size={16} aria-hidden="true" />
-            {institute.whatsapp.label}
+            <Phone size={16} aria-hidden="true" />
+            {institute.admissionEnquiry.label}
           </a>
         </div>
       </div>
 
       <div className="border-t border-white/10">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-1.5 px-5 py-5 text-center sm:flex-row sm:gap-4 sm:px-8 sm:text-left lg:px-10 xl:px-14">
-          <p className="text-xs leading-5 text-slate-400">
-            © {new Date().getFullYear()} {institute.name}. All rights
-            reserved.
-          </p>
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center gap-3 px-5 py-4 text-center sm:px-8 lg:px-10 xl:px-14">
+          <nav
+            aria-label="Legal and privacy links"
+            className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1"
+          >
+            <Link to={LEGAL_PATHS.privacy} className={legalLinkClass}>
+              Privacy Policy
+            </Link>
+            <Link to={LEGAL_PATHS.terms} className={legalLinkClass}>
+              Terms &amp; Conditions
+            </Link>
+            <button
+              type="button"
+              onClick={openCookiePreferences}
+              className={legalLinkClass}
+            >
+              Cookie preferences
+            </button>
+          </nav>
 
-          {lastUpdated && (
-            <p className="text-xs leading-5 text-slate-400 sm:text-right">
-              Last updated:{' '}
-              <time dateTime={SITE_LAST_UPDATED}>{lastUpdated}</time>
+          <div className="flex flex-col items-center justify-between gap-1.5 sm:w-full sm:flex-row sm:gap-4">
+            <p className="text-xs leading-5 text-slate-400">
+              © {new Date().getFullYear()} {institute.name}. All rights
+              reserved.
             </p>
-          )}
+
+            {lastUpdated && (
+              <p className="text-xs leading-5 text-slate-400 sm:text-right">
+                Last updated:{' '}
+                <time dateTime={SITE_LAST_UPDATED}>{lastUpdated}</time>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </footer>

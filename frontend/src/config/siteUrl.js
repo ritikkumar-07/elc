@@ -24,3 +24,15 @@ export function normalizeSiteUrl(value) {
     return ''
   }
 }
+
+export function resolveSiteUrl(
+  env = {},
+  { allowVercelFallback = false } = {},
+) {
+  const configured = normalizeSiteUrl(env?.VITE_SITE_URL)
+  if (configured) return configured
+
+  if (!allowVercelFallback) return ''
+
+  return normalizeSiteUrl(env?.VERCEL_PROJECT_PRODUCTION_URL)
+}

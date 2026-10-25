@@ -449,7 +449,7 @@ export default function DashboardHome() {
                 <CalendarDays className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                   Today
                 </p>
                 <p className="mt-0.5 text-xs font-semibold text-slate-800 sm:text-sm">

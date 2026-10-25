@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 
 import { loadEnv } from 'vite'
 
-import courses from '../src/data/courses.js'
-import { normalizeSiteUrl } from '../src/config/siteUrl.js'
+import publicPages from '../src/data/publicPages.js'
+import { resolveSiteUrl } from '../src/config/siteUrl.js'
 
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -62,15 +62,14 @@ function injectSocialImage(html, origin) {
 }
 
 const fileEnv = loadEnv('production', projectRoot, 'VITE_')
-const siteUrl = normalizeSiteUrl(
-  process.env.VITE_SITE_URL || fileEnv.VITE_SITE_URL,
+const siteUrl = resolveSiteUrl(
+  {
+    VITE_SITE_URL: process.env.VITE_SITE_URL || fileEnv.VITE_SITE_URL,
+    VERCEL_PROJECT_PRODUCTION_URL:
+      process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  },
+  { allowVercelFallback: true },
 )
-const publicPaths = [
-  '/',
-  '/contact',
-  ...courses.map((course) => `/courses/${course.id}`),
-]
-
 await mkdir(outDir, { recursive: true })
 
 if (!siteUrl) {
@@ -79,12 +78,18 @@ if (!siteUrl) {
 `
   await writeFile(path.join(outDir, 'sitemap.xml'), emptySitemap)
   console.warn(
-    'Sitemap generated without URLs: VITE_SITE_URL is not configured.',
+    'Sitemap generated without URLs: configure VITE_SITE_URL or deploy with VERCEL_PROJECT_PRODUCTION_URL.',
   )
 } else {
-  const urls = publicPaths
-    .map((publicPath) => new URL(publicPath, `${siteUrl}/`).toString())
-    .map((url) => `  <url>\n    <loc>${escapeXml(url)}</loc>\n  </url>`)
+  const urls = publicPages
+    .map((page) => {
+      const url = new URL(page.path, `${siteUrl}/`).toString()
+      const lastmod = page.lastmod
+        ? `\n    <lastmod>${escapeXml(page.lastmod)}</lastmod>`
+        : ''
+
+      return `  <url>\n    <loc>${escapeXml(url)}</loc>${lastmod}\n  </url>`
+    })
     .join('\n')
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
@@ -96,7 +101,7 @@ ${urls}
 
   const robotsPath = path.join(outDir, 'robots.txt')
   const robots = await readFile(robotsPath, 'utf8').catch(() => '')
-  if (robots && !robots.includes('Sitemap:')) {
+  if (robots && !/^Sitemap:\s*/m.test(robots)) {
     await writeFile(
       robotsPath,
       `${robots.trimEnd()}\n\nSitemap: ${siteUrl}/sitemap.xml\n`,
@@ -109,5 +114,5 @@ ${urls}
     await writeFile(indexPath, injectSocialImage(html, siteUrl))
   }
 
-  console.log(`Sitemap generated with ${publicPaths.length} public URLs.`)
+  console.log(`Sitemap generated with ${publicPages.length} public URLs.`)
 }

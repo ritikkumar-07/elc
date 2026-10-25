@@ -11,9 +11,17 @@ import {
 import ProtectedRoute from './components/common/ProtectedRoute.jsx'
 import SeoManager from './components/seo/SeoManager.jsx'
 import { LoadingState } from './components/common/DashboardUI.jsx'
+import CookieConsent from './components/privacy/CookieConsent.jsx'
+import Analytics from './components/privacy/Analytics.jsx'
+import Footer from './components/layout/Footer.jsx'
+import Navbar from './components/layout/Navbar.jsx'
 import Home from './pages/Home.jsx'
 
 const Contact = lazy(() => import('./pages/Contact.jsx'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy.jsx'))
+const TermsAndConditions = lazy(() =>
+  import('./pages/TermsAndConditions.jsx'),
+)
 const CourseDetails = lazy(() =>
   import('./pages/CourseDetails.jsx'),
 )
@@ -73,26 +81,58 @@ const StudentTests = lazy(() =>
 
 function NotFound() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-5 text-center">
-      <p className="text-sm font-bold uppercase tracking-widest text-blue-800">
-        Error 404
-      </p>
+    <div className="flex min-h-screen flex-col bg-white">
+      <Navbar />
 
-      <h1 className="mt-3 text-4xl font-extrabold text-slate-900">
-        Page not found
-      </h1>
-
-      <p className="mt-3 text-slate-600">
-        The page you are looking for does not exist.
-      </p>
-
-      <Link
-        to="/"
-        className="mt-6 rounded-xl bg-blue-900 px-5 py-3 font-bold text-white"
+      <main
+        id="main-content"
+        tabIndex={-1}
+        aria-labelledby="not-found-title"
+        className="flex flex-1 items-center justify-center bg-[#f6f8fc] px-5 py-16 sm:py-24"
       >
-        Return Home
-      </Link>
-    </main>
+        <section className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-7 text-center shadow-sm sm:p-12">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-800">
+            Error 404
+          </p>
+
+          <h1
+            id="not-found-title"
+            className="mt-4 font-serif text-3xl font-bold tracking-tight text-[#102d59] sm:text-5xl"
+          >
+            Page not found
+          </h1>
+
+          <p className="mx-auto mt-5 max-w-lg text-base leading-8 text-slate-600">
+            The page you are looking for may have moved, or the address may be
+            incorrect. You can return to the homepage or continue to one of the
+            links below.
+          </p>
+
+          <div className="mt-8 flex flex-col justify-center gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
+            <Link
+              to="/"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#19366e] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#122951] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
+            >
+              Return home
+            </Link>
+            <Link
+              to="/#courses"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
+            >
+              Browse courses
+            </Link>
+            <Link
+              to="/contact"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
+            >
+              Contact us
+            </Link>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
   )
 }
 
@@ -136,6 +176,8 @@ export default function App() {
     <BrowserRouter>
       <SeoManager />
       <ScrollManager />
+      <Analytics />
+      <CookieConsent />
       <Suspense
         fallback={<LoadingState label="Loading..." fullPage />}
       >
@@ -150,6 +192,14 @@ export default function App() {
           element={<CourseDetails />}
         />
         <Route path="/contact" element={<Contact />} />
+        <Route
+          path="/privacy-policy"
+          element={<PrivacyPolicy />}
+        />
+        <Route
+          path="/terms-and-conditions"
+          element={<TermsAndConditions />}
+        />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 

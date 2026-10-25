@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 
 import { useAuth } from '../../context/AuthContext.jsx'
 
@@ -10,6 +11,7 @@ const navLinks = [
   { label: 'About Us', href: '/#about' },
   { label: 'Announcements', href: '/#announcements' },
   { label: 'Toppers', href: '/#toppers' },
+  { label: 'Contact', href: '/contact' },
 ]
 
 const dashboardRoutes = {
@@ -72,6 +74,13 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[#19366e] focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#19366e]"
+      >
+        Skip to main content
+      </a>
+
       <nav
         aria-label="Main navigation"
         className="flex min-h-[72px] w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-10"
@@ -79,9 +88,9 @@ export default function Navbar() {
         {/* LEFT: ELC BRANDING */}
         <Link
           to="/"
-          className="flex min-w-0 shrink-0 items-center gap-3"
+          className="flex min-w-0 items-center gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#19366e] font-serif text-xl font-bold text-white">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#19366e] font-serif text-xl font-bold text-white">
             E
           </span>
 
@@ -123,7 +132,7 @@ export default function Navbar() {
           {!sessionLoading && !user && (
             <Link
               to="/login"
-              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#19366e] px-4 py-2 text-sm font-semibold text-white hover:bg-[#122951] sm:px-5"
+              className="hidden min-h-11 items-center gap-2 rounded-lg bg-[#19366e] sm:inline-flex px-4 py-2 text-sm font-semibold text-white hover:bg-[#122951] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2 sm:px-5"
             >
               Login <span aria-hidden="true">→</span>
             </Link>
@@ -136,7 +145,7 @@ export default function Navbar() {
                 aria-expanded={profileOpen}
                 aria-haspopup="menu"
                 onClick={() => setProfileOpen((value) => !value)}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-slate-800 transition-colors hover:bg-slate-50"
+                className="flex min-h-11 items-center gap-2 rounded-lg px-2 py-1.5 text-slate-800 transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#19366e] text-sm font-bold text-white">
                   {initial}
@@ -196,9 +205,13 @@ export default function Navbar() {
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((value) => !value)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-xl text-[#19366e] hover:bg-slate-50 lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-xl text-[#19366e] hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2 lg:hidden"
           >
-            {menuOpen ? '×' : '☰'}
+            {menuOpen ? (
+              <X aria-hidden="true" className="h-5 w-5" />
+            ) : (
+              <Menu aria-hidden="true" className="h-5 w-5" />
+            )}
           </button>
         </div>
       </nav>

@@ -5,6 +5,7 @@ import {
   buttonSecondary,
   inputClass,
 } from '../common/DashboardUI.jsx'
+import { buildImageSrcSet, optimizedImageUrl } from '../../lib/imageUrl.js'
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
 const photoTypes = new Set(['image/jpeg', 'image/png'])
@@ -450,12 +451,16 @@ export default function TopperForm({
             <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
               {showPhoto ? (
                 <img
-                  src={previewPhoto}
+                  src={optimizedImageUrl(previewPhoto, { width: 480, quality: 78 })}
+                  srcSet={buildImageSrcSet(previewPhoto, [240, 480, 720])}
+                  sizes="208px"
                   alt={
                     photoFile
                       ? 'Preview of selected student photo'
                       : 'Current student photo preview'
                   }
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover object-center"
                   onError={() => setPhotoLoadError(true)}
                 />
@@ -587,7 +592,7 @@ export default function TopperForm({
               maxLength={500}
               placeholder="Optional achievement note"
             />
-            <span className="mt-1 block text-right text-xs text-slate-400">
+            <span className="mt-1 block text-right text-xs text-slate-500">
               {descriptionLength}/500
             </span>
             <FieldError

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { buildImageSrcSet, optimizedImageUrl } from '../../lib/imageUrl.js'
+
 import { Badge, cardClass } from '../common/DashboardUI.jsx'
 
 function getId(topper) {
@@ -28,8 +30,10 @@ function TopperThumbnail({ topper, sizeClass = 'h-12 w-12' }) {
     >
       {showPhoto ? (
         <img
-          src={photo}
-          alt={`Photo of ${topper.name}`}
+          src={optimizedImageUrl(photo, { width: 160, quality: 78 })}
+          srcSet={buildImageSrcSet(photo, [80, 160, 240])}
+          sizes="80px"
+          alt={`Portrait of ${topper.name}`}
           loading="lazy"
           decoding="async"
           className="h-full w-full object-cover object-center"
@@ -219,7 +223,7 @@ export default function TopperList({
 
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <dt className="font-semibold uppercase tracking-wide text-slate-400">
+                      <dt className="font-semibold uppercase tracking-wide text-slate-500">
                         Score
                       </dt>
                       <dd className="mt-0.5 font-bold text-[#19366e]">
@@ -227,7 +231,7 @@ export default function TopperList({
                       </dd>
                     </div>
                     <div>
-                      <dt className="font-semibold uppercase tracking-wide text-slate-400">
+                      <dt className="font-semibold uppercase tracking-wide text-slate-500">
                         Session
                       </dt>
                       <dd className="mt-0.5 font-semibold text-slate-700">

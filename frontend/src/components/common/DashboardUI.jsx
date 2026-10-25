@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, ArrowUpRight, X } from 'lucide-react'
 
 export const inputClass =
-  'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500'
+  'w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-blue-700 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500'
 
 export const buttonPrimary =
   'inline-flex min-h-10 items-center justify-center rounded-xl bg-[#19366e] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#122951] focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60'
@@ -155,7 +155,7 @@ export function CompactStatCard({
         </p>
         {to && (
           <ArrowUpRight
-            className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:text-slate-700"
+            className="h-4 w-4 shrink-0 text-slate-500 transition group-hover:text-slate-700"
             aria-hidden="true"
           />
         )}
@@ -352,15 +352,55 @@ export function EmptyState({ title, description, action, icon = '▤' }) {
 }
 
 export function Modal({ open, title, description, onClose, children, wide = false }) {
+  const titleId = useId()
+  const descriptionId = useId()
+  const panelRef = useRef(null)
+
   useEffect(() => {
     if (!open) return undefined
 
-    function handleEscape(event) {
-      if (event.key === 'Escape') onClose?.()
+    const previousFocus = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    const panel = panelRef.current
+    document.body.style.overflow = 'hidden'
+    panel?.focus()
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose?.()
+        return
+      }
+
+      if (event.key !== 'Tab' || !panel) return
+
+      const focusable = [
+        ...panel.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((element) => element.getClientRects().length > 0)
+
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
 
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      previousFocus?.focus?.()
+    }
   }, [open, onClose])
 
   if (!open) return null
@@ -373,21 +413,27 @@ export function Modal({ open, title, description, onClose, children, wide = fals
       }}
     >
       <section
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="dashboard-modal-title"
-        className={`my-auto w-full rounded-2xl bg-white p-5 shadow-2xl sm:p-6 ${wide ? 'max-w-4xl' : 'max-w-xl'}`}
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
+        className={`my-auto w-full rounded-2xl bg-white p-5 shadow-2xl outline-none sm:p-6 ${wide ? 'max-w-4xl' : 'max-w-xl'}`}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2
-              id="dashboard-modal-title"
+              id={titleId}
               className="text-xl font-bold text-slate-950"
             >
               {title}
             </h2>
             {description && (
-              <p className="mt-1 text-sm leading-6 text-slate-500">
+              <p
+                id={descriptionId}
+                className="mt-1 text-sm leading-6 text-slate-500"
+              >
                 {description}
               </p>
             )}

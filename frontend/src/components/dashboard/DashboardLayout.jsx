@@ -203,6 +203,13 @@ export default function DashboardLayout({
 
   return (
     <div className="elc-layout flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[#19366e] focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#19366e]"
+      >
+        Skip to main content
+      </a>
+
       {/* Shared ELC navbar */}
       <header className="sticky top-0 z-50 w-full shrink-0 border-b border-slate-200 bg-white print:hidden">
         <div className="mx-auto flex min-h-[72px] w-full items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8">
@@ -294,7 +301,7 @@ export default function DashboardLayout({
                     className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                   >
                     <UserRound
-                      className="h-4 w-4 text-slate-400"
+                      className="h-4 w-4 text-slate-500"
                       aria-hidden="true"
                     />
                     My profile
@@ -311,7 +318,7 @@ export default function DashboardLayout({
                     className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                   >
                     <KeyRound
-                      className="h-4 w-4 text-slate-400"
+                      className="h-4 w-4 text-slate-500"
                       aria-hidden="true"
                     />
                     Change password
@@ -381,7 +388,7 @@ export default function DashboardLayout({
           >
             {visibleItems.map((group) => (
               <div key={group.section} className="mb-5 last:mb-2">
-                <p className="mb-1.5 px-3 text-[10px] font-bold tracking-[0.14em] text-slate-400">
+                <p className="mb-1.5 px-3 text-[10px] font-bold tracking-[0.14em] text-slate-500">
                   {group.section}
                 </p>
 
@@ -407,7 +414,7 @@ export default function DashboardLayout({
                             className={`h-4 w-4 shrink-0 ${
                               isActive
                                 ? 'text-[#19366e]'
-                                : 'text-slate-400 group-hover:text-slate-600'
+                                : 'text-slate-500 group-hover:text-slate-600'
                             }`}
                           />
                           <span className="truncate">{label}</span>
@@ -454,7 +461,11 @@ export default function DashboardLayout({
             </Link>
           </div>
 
-          <main className="mx-auto w-full max-w-[1700px] flex-1 px-4 py-6 sm:px-6 lg:px-8 print:max-w-none print:px-0 print:py-0">
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="mx-auto w-full max-w-[1700px] flex-1 px-4 py-6 sm:px-6 lg:px-8 print:max-w-none print:px-0 print:py-0"
+          >
             {children}
           </main>
         </div>

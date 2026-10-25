@@ -12,6 +12,7 @@ import SectionHeading from '../components/common/SectionHeading.jsx'
 import Footer from '../components/layout/Footer.jsx'
 import Navbar from '../components/layout/Navbar.jsx'
 import { institute } from '../config/institute.js'
+import { trackEvent } from '../lib/analytics.js'
 
 const contactCards = [
   {
@@ -47,7 +48,7 @@ export default function Contact() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="relative isolate overflow-hidden bg-[#f4f6fb] px-5 py-14 sm:py-20">
           <div
             aria-hidden="true"
@@ -76,6 +77,9 @@ export default function Contact() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <a
                   href={institute.phone.href}
+                  onClick={() =>
+                    trackEvent('CTA: Call', { location: 'contact' })
+                  }
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#e6b34a] px-5 py-3 text-sm font-bold text-[#102d59] transition-colors hover:bg-[#f0c466] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
                 >
                   <Phone size={17} aria-hidden="true" />
@@ -84,6 +88,9 @@ export default function Contact() {
 
                 <a
                   href={institute.email.href}
+                  onClick={() =>
+                    trackEvent('CTA: Email', { location: 'contact' })
+                  }
                   className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#b5c2d8] bg-white px-5 py-3 text-sm font-semibold text-[#19366e] transition-colors hover:border-[#19366e] hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
                 >
                   <Mail size={17} aria-hidden="true" />
@@ -194,6 +201,11 @@ export default function Contact() {
                   <a
                     key={card.label}
                     href={card.href}
+                    onClick={() =>
+                      trackEvent('CTA: Contact Card', {
+                        method: card.label,
+                      })
+                    }
                     className="flex min-h-52 flex-col rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-[#19366e]/30 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
                   >
                     {content}
@@ -216,13 +228,19 @@ export default function Contact() {
                   Admission enquiry
                 </p>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                  This website does not currently include an online enquiry
-                  form. Please call or email the center directly.
+                  The website does not currently include an online enquiry
+                  form or accept online payments. Please call or email the center
+                  directly to confirm courses, schedules, and admission steps.
                 </p>
               </div>
 
               <a
                 href={institute.admissionEnquiry.href}
+                onClick={() =>
+                  trackEvent('CTA: Admission Enquiry', {
+                    location: 'contact',
+                  })
+                }
                 className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#19366e] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#122951] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e] focus-visible:ring-offset-2"
               >
                 <Phone size={16} aria-hidden="true" />

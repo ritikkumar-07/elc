@@ -10,7 +10,7 @@ import {
 import { attendanceStatusOptions } from './status.js'
 
 const fieldClass =
-  'h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500'
+  'h-9 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-500'
 
 const labelClass =
   'mb-1 block text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500'
@@ -66,7 +66,7 @@ export default function AttendanceToolbar({
           <span className={labelClass}>Date</span>
           <span className="relative block">
             <CalendarDays
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
               aria-hidden="true"
             />
             <input
@@ -83,7 +83,7 @@ export default function AttendanceToolbar({
           <span className={labelClass}>Session</span>
           <span className="relative block">
             <Clock
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
               aria-hidden="true"
             />
             <input
@@ -119,7 +119,7 @@ export default function AttendanceToolbar({
           <span className={labelClass}>Search students</span>
           <span className="relative block">
             <Search
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
               aria-hidden="true"
             />
             <input
@@ -148,7 +148,7 @@ export default function AttendanceToolbar({
           <span className={labelClass}>Status filter</span>
           <span className="relative block">
             <Filter
-              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500"
               aria-hidden="true"
             />
             <select

@@ -106,6 +106,8 @@ export async function login(req, res, next) {
     const user = await User.findOne({ email }).select('+password')
 
     if (!user) {
+      await bcrypt.compare(parsed.data.password, DUMMY_PASSWORD_HASH)
+
       return res.status(401).json({
         success: false,
         code: 'INVALID_CREDENTIALS',

@@ -41,7 +41,32 @@ export default function LoginForm() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
+
+  function validateForm() {
+    const nextErrors = {}
+    const trimmedEmail = email.trim()
+
+    if (!trimmedEmail) {
+      nextErrors.email = 'Enter your email address.'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      nextErrors.email = 'Enter a valid email address.'
+    }
+
+    if (!password) {
+      nextErrors.password = 'Enter your password.'
+    }
+
+    return nextErrors
+  }
+
+  function clearFieldError(field) {
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      return { ...current, [field]: '' }
+    })
+  }
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -50,11 +75,23 @@ export default function LoginForm() {
 
     setError('')
 
-    if (!email.trim() || !password) {
-      setError('Please enter your email address and password.')
+    const nextErrors = validateForm()
+
+    if (Object.keys(nextErrors).some((field) => nextErrors[field])) {
+      setFieldErrors(nextErrors)
+      setError('Please check the highlighted fields.')
+
+      const firstInvalid = nextErrors.email
+        ? 'login-email'
+        : 'login-password'
+
+      window.requestAnimationFrame(() => {
+        document.getElementById(firstInvalid)?.focus()
+      })
       return
     }
 
+    setFieldErrors({})
     setLoading(true)
 
     try {
@@ -106,7 +143,7 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} noValidate aria-busy={loading} className="space-y-5">
       <div>
         <label
           htmlFor="login-role"
@@ -142,13 +179,24 @@ export default function LoginForm() {
           type="email"
           autoComplete="username"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value)
+            clearFieldError('email')
+          }}
           placeholder="you@example.com"
           required
           maxLength={254}
           disabled={loading}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
+          aria-invalid={Boolean(fieldErrors.email)}
+          aria-describedby={fieldErrors.email ? 'login-email-error' : undefined}
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-blue-700 focus:ring-4 focus:ring-blue-100 disabled:opacity-60"
         />
+
+        {fieldErrors.email && (
+          <p id="login-email-error" className="mt-2 text-sm font-medium text-red-700">
+            {fieldErrors.email}
+          </p>
+        )}
       </div>
 
       <div>
@@ -168,22 +216,35 @@ export default function LoginForm() {
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) => {
+              setPassword(event.target.value)
+              clearFieldError('password')
+            }}
             placeholder="Enter your password"
             required
             maxLength={72}
             disabled={loading}
-            className="min-w-0 flex-1 rounded-xl bg-transparent px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 disabled:opacity-60"
+            aria-invalid={Boolean(fieldErrors.password)}
+            aria-describedby={
+              fieldErrors.password ? 'login-password-error' : undefined
+            }
+            className="min-w-0 flex-1 rounded-xl bg-transparent px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-500 disabled:opacity-60"
           />
           <button
             type="button"
             onClick={() => setShowPassword((visible) => !visible)}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
-            className="shrink-0 px-4 text-xs font-semibold text-blue-800 hover:text-blue-950"
+            className="shrink-0 rounded-r-xl px-4 text-xs font-semibold text-blue-800 hover:text-blue-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#19366e]"
           >
             {showPassword ? 'Hide' : 'Show'}
           </button>
         </div>
+
+        {fieldErrors.password && (
+          <p id="login-password-error" className="mt-2 text-sm font-medium text-red-700">
+            {fieldErrors.password}
+          </p>
+        )}
       </div>
 
       {error && (

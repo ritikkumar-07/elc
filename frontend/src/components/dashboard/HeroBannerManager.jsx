@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { apiRequest } from '../../lib/api.js'
+import { optimizedImageUrl } from '../../lib/imageUrl.js'
 
 const EMPTY_FORM = {
   eyebrow: '',
@@ -376,8 +377,10 @@ export default function HeroBannerManager() {
                 </p>
 
                 <img
-                  src={form.imageUrl}
-                  alt="Banner preview"
+                  src={optimizedImageUrl(form.imageUrl, { width: 960, quality: 78 })}
+                  alt={form.altText || 'Hero banner image preview'}
+                  loading="lazy"
+                  decoding="async"
                   className="max-h-64 w-full bg-slate-100 object-cover"
                   onError={(event) => {
                     event.currentTarget.style.display = 'none'
@@ -523,12 +526,14 @@ export default function HeroBannerManager() {
                   <div className="relative h-44 bg-slate-100">
                     {banner.imageUrl ? (
                       <img
-                        src={banner.imageUrl}
+                        src={optimizedImageUrl(banner.imageUrl, { width: 640, quality: 78 })}
                         alt={banner.altText || ''}
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="grid h-full place-items-center text-sm text-slate-400">
+                      <div className="grid h-full place-items-center text-sm text-slate-500">
                         No image available
                       </div>
                     )}

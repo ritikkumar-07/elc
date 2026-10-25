@@ -1,7 +1,7 @@
 import { attendanceStatusOptions } from './status.js'
 
 const noteClass =
-  'h-8 w-full min-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400'
+  'h-8 w-full min-w-[120px] rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500'
 
 function StatusControl({
   student,
