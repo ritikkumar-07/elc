@@ -172,6 +172,41 @@ test('the frontend origin is matched exactly, including scheme', async () => {
   )
 })
 
+test('an unknown email returns invalid credentials without a server error', async () => {
+  const { default: User } = await import('../models/User.js')
+  const originalFindOne = User.findOne
+
+  User.findOne = () => ({
+    select: async () => null,
+  })
+
+  try {
+    const response = await request('/api/v1/auth/login', {
+      method: 'POST',
+      headers: {
+        Origin: allowedOrigin,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: 'unknown-user@example.invalid',
+        password: 'irrelevant-password',
+      }),
+    })
+
+    assert.equal(response.status, 401)
+    assert.equal(
+      response.headers.get('access-control-allow-origin'),
+      allowedOrigin,
+    )
+
+    const body = await response.json()
+    assert.equal(body.success, false)
+    assert.equal(body.code, 'INVALID_CREDENTIALS')
+  } finally {
+    User.findOne = originalFindOne
+  }
+})
+
 test('malformed JSON returns a controlled error with CORS headers', async () => {
   const response = await request('/api/v1/auth/login', {
     method: 'POST',

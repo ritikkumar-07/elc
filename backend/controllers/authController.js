@@ -28,6 +28,9 @@ const loginSchema = z.object({
   password: z.string().min(1).max(72),
 })
 
+const DUMMY_PASSWORD_HASH =
+  '$2b$12$GKDcI85or9MWcuksjHzoHetZ0vWCb.JbOc/JYe9L/ZYW3.61IyEJO'
+
 const SIGNUP_RESPONSE_MESSAGE =
   'Registration received. If the email is not already registered, an administrator will review the request.'
 
